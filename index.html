@@ -367,7 +367,7 @@
                     </button>
                 </header>
                 <div class="p-4">
-                    <button id="newChatBtn" class="bg-gray-700 text-white w-full rounded-full py-2 px-4 transition-transform hover:scale-105 flex items-center justify-center">
+                    <button id="newChatBtn" class="bg-gray-700 text-white w-full rounded-full py-2 px-4 transition-transform hover:scale-105 flex items-center justify-center" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-2">
                             <path d="M12 5v14M5 12h14"></path>
                         </svg>
@@ -384,7 +384,7 @@
                 <div id="userInfo" class="flex flex-col items-center gap-2 mb-4 hidden">
                     <span id="userName" class="font-bold text-sm text-center"></span>
                     <!-- زر تسجيل الخروج -->
-                    <button id="logoutBtn" class="text-sm text-red-400 hover:text-red-500 transition-colors duration-200">
+                    <button id="logoutBtn" class="text-sm text-red-400 hover:text-red-500 transition-colors duration-200" disabled>
                         تسجيل الخروج
                     </button>
                 </div>
@@ -401,7 +401,7 @@
                 <!-- رأس الدردشة -->
                 <header class="chat-header p-6 flex items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
-                        <button id="menu-btn" class="sidebar-header-btn">
+                        <button id="menu-btn" class="sidebar-header-btn" disabled>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="3" y1="12" x2="21" y2="12"></line>
                                 <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -418,7 +418,7 @@
                     </div>
                     
                     <!-- زر مسح المحادثة -->
-                    <button id="clearChatBtn" class="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-transform hover:scale-110" title="مسح المحادثة">
+                    <button id="clearChatBtn" class="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition-transform hover:scale-110" title="مسح المحادثة" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -491,7 +491,7 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // API key for Gemini and Imagen models (left empty for Canvas environment)
-        const apiKey = "AIzaSyDXp2bN3UXlPr99K9gk-j0qxdzKMk375CQ";
+        const apiKey = "";
 
         // Initialize Firebase
         let app, auth, db;
@@ -599,6 +599,12 @@
             }
             chatInput.focus();
             
+            // Enable main buttons
+            newChatBtn.disabled = false;
+            logoutBtn.disabled = false;
+            clearChatBtn.disabled = false;
+            menuBtn.disabled = false;
+
             // Event listener for send button
             sendChatBtn.addEventListener('click', sendMessage);
 
@@ -660,6 +666,7 @@
                     isFirebaseInitialized = true;
                     loadingOverlay.classList.remove('hidden');
 
+                    // Set up the Auth State Listener
                     onAuthStateChanged(auth, async (user) => {
                         loadingOverlay.classList.add('hidden');
                         if (user) {
@@ -675,10 +682,13 @@
                             setupUIAndListeners();
                             appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
                         } else {
+                            // User is null, handle sign-in or offline mode
                             isAuthReady = false;
                             statusIndicator.innerText = "جاري الاتصال...";
                             statusIndicator.classList.remove('text-green-400', 'text-red-400');
                             statusIndicator.classList.add('text-yellow-400');
+                            
+                            // Try signing in with the provided token or anonymously
                             try {
                                 if (initialAuthToken) {
                                     await signInWithCustomToken(auth, initialAuthToken);
@@ -687,14 +697,21 @@
                                 }
                             } catch (e) {
                                 console.error("خطأ في تسجيل الدخول:", e);
-                                statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
-                                statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
-                                statusIndicator.classList.add('text-red-400');
-                                setupUIAndListeners();
-                                appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
+                                // If initial sign-in fails, try anonymous as a fallback
+                                try {
+                                    await signInAnonymously(auth);
+                                } catch (anonError) {
+                                    console.error("فشل تسجيل الدخول المجهول:", anonError);
+                                    statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
+                                    statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
+                                    statusIndicator.classList.add('text-red-400');
+                                    setupUIAndListeners();
+                                    appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
+                                }
                             }
                         }
                     });
+
                 } catch (e) {
                     console.error("خطأ في تهيئة Firebase:", e);
                     isFirebaseInitialized = false;
@@ -1022,6 +1039,9 @@
                 isWaitingForResponse = false;
                 chatInput.disabled = false;
                 sendChatBtn.disabled = false;
+                if (isSpeechRecognitionSupported) {
+                    micBtn.disabled = false;
+                }
                 chatInput.focus();
             }
         };
@@ -1105,6 +1125,9 @@
                 isWaitingForResponse = false;
                 chatInput.disabled = false;
                 sendChatBtn.disabled = false;
+                if (isSpeechRecognitionSupported) {
+                    micBtn.disabled = false;
+                }
                 chatInput.focus();
             }
         };
