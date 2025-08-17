@@ -427,6 +427,10 @@
                         </svg>
                     </button>
                 </header>
+                 <!-- Connection Status Indicator -->
+                 <div id="statusIndicator" class="text-center py-2 text-sm text-yellow-400">
+                    جاري الاتصال...
+                </div>
 
                 <!-- سجل الدردشة -->
                 <main id="chatLog" class="chat-log text-right">
@@ -486,6 +490,7 @@
         let app, auth, db;
         let userId = null;
         let userName = 'صديقي';
+        let isAuthReady = false;
 
         // DOM Elements
         const chatLog = document.getElementById('chatLog');
@@ -505,6 +510,7 @@
         const confirmationModal = document.getElementById('confirmationModal');
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
 
         // State variables
         let chatHistory = [];
@@ -642,42 +648,47 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Wait for auth state to be ready
-                await new Promise(resolve => {
-                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            userInfo.classList.remove('hidden');
-                            userName = user.displayName || 'صديقي';
-                            userNameSpan.innerText = `مرحباً، ${userName}!`;
-                            loadConversations();
-                            resolve();
-                        } else {
-                            try {
-                                if (initialAuthToken) {
-                                    await signInWithCustomToken(auth, initialAuthToken);
-                                } else {
-                                    await signInAnonymously(auth);
-                                }
-                            } catch (e) {
-                                console.error("خطأ في تسجيل الدخول:", e);
-                                // The user can still use the app without persistence
-                                appendMessage("عذراً، لم نتمكن من تسجيل دخولك. قد لا يتم حفظ محادثاتك.", "onra");
-                            } finally {
-                                resolve();
+                // Set up auth state listener
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        userInfo.classList.remove('hidden');
+                        userName = user.displayName || 'صديقي';
+                        userNameSpan.innerText = `مرحباً، ${userName}!`;
+                        statusIndicator.innerText = "تم الاتصال بنجاح. يمكن حفظ محادثاتك.";
+                        statusIndicator.classList.remove('text-yellow-400');
+                        statusIndicator.classList.add('text-green-400');
+                        loadConversations();
+                    } else {
+                        isAuthReady = false;
+                        statusIndicator.innerText = "جاري الاتصال...";
+                        statusIndicator.classList.remove('text-green-400');
+                        statusIndicator.classList.add('text-yellow-400');
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
                             }
+                        } catch (e) {
+                            console.error("خطأ في تسجيل الدخول:", e);
+                            statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
+                            statusIndicator.classList.remove('text-yellow-400');
+                            statusIndicator.classList.add('text-red-400');
                         }
-                        unsubscribe();
-                    });
+                    }
                 });
-
+                
                 // Now that auth is ready, set up the UI
                 setupUIAndListeners();
                 appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
 
             } catch (e) {
                 console.error("خطأ في تهيئة Firebase:", e);
-                appendMessage("عذراً، لم نتمكن من الاتصال بالخدمات. قد لا يتم حفظ محادثاتك.", "onra");
+                statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
+                statusIndicator.classList.remove('text-yellow-400');
+                statusIndicator.classList.add('text-red-400');
             }
         };
 
@@ -709,8 +720,8 @@
         };
 
         const saveMessageToFirestore = async (sender, text, isCode = false, isImage = false, isAudio = false) => {
-            if (!userId) {
-                console.log("المستخدم لم يسجل الدخول، لن يتم حفظ الرسالة.");
+            if (!isAuthReady || !userId) {
+                console.log("المستخدم لم يسجل الدخول أو لم يتم تهيئة المصادقة بعد، لن يتم حفظ الرسالة.");
                 return;
             }
             
@@ -759,7 +770,7 @@
 
         // Function to delete a conversation
         const deleteConversation = async (convId, elementToRemove) => {
-            if (!userId) {
+            if (!isAuthReady || !userId) {
                 console.error("المستخدم لم يسجل الدخول، لا يمكن حذف المحادثة.");
                 return;
             }
@@ -788,7 +799,7 @@
         };
 
         const loadConversations = () => {
-            if (!userId) {
+            if (!isAuthReady || !userId) {
                 conversationList.innerHTML = `<div class="p-4 text-center text-gray-400">سجل الدخول لحفظ وعرض محادثاتك.</div>`;
                 return;
             }
@@ -1084,7 +1095,9 @@
             // Disable input and buttons while waiting for response
             chatInput.disabled = true;
             sendChatBtn.disabled = true;
-            micBtn.disabled = true;
+            if (isSpeechRecognitionSupported) {
+                micBtn.disabled = true;
+            }
 
             // Check for the specific question and provide the hardcoded response
             const lowerPrompt = userMessage.toLowerCase();
@@ -1100,6 +1113,9 @@
                     isWaitingForResponse = false;
                     chatInput.disabled = false;
                     sendChatBtn.disabled = false;
+                    if (isSpeechRecognitionSupported) {
+                        micBtn.disabled = false;
+                    }
                     chatInput.focus();
                  }, 1500); // simulate a slight delay
             } else if (userMessage.toLowerCase().includes('ارسم صورة') || userMessage.toLowerCase().includes('توليد صورة') ||
