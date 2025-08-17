@@ -145,6 +145,9 @@
             height: 40px;
             margin-right: 8px;
             transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .chat-input-container button:hover {
             background-color: #357ABD;
@@ -220,8 +223,10 @@
             <div class="chat-input-container">
                 <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." class="text-right" />
                 <button id="sendChatBtn">
-                    <svg xmlns="http://www.w3.org/2-24/24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                    <!-- SVG for send icon - it will be centered by CSS -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>
                 </button>
             </div>
@@ -230,8 +235,12 @@
 
     <!-- Chatbot Floating Button -->
     <div id="openChatBtn" class="chat-button flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2-24/24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 4.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Z" />
+        <!-- SVG for Minray icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 0 0-7.3 16.7l-2.4 2.3c-.6.6-1.5-.4-.9-1l2.4-2.3A10 10 0 1 0 12 2z"></path>
+            <path d="M8 12h.01"></path>
+            <path d="M12 12h.01"></path>
+            <path d="M16 12h.01"></path>
         </svg>
     </div>
 
@@ -240,6 +249,10 @@
         const NEWS_API_KEY = "98062c510f76a9c5952701c56b69f48b"; 
         // This is the user's provided API key for GoldAPI.io
         const GOLD_API_KEY = "goldapi-13ywsmef5gjs9-io"; 
+        
+        // **هام جداً** : يجب استبدال هذا المتغير بمفتاح Gemini API الخاص بك
+        // اذهب إلى https://aistudio.google.com/app/apikey للحصول عليه
+        const GEMINI_API_KEY = "AIzaSyBYJTbyLgwaTqwI1ncwKCIcF93PQ4HgMVM"; // <--- الصق مفتاح API الخاص بك هنا بين علامتي التنصيص
 
         // Function to fetch and display gold prices
         const fetchGoldPrices = async () => {
@@ -301,12 +314,16 @@
             summaryTextElement.textContent = "جاري تلخيص الخبر..."; // Show loading message
 
             try {
+                if (!GEMINI_API_KEY) {
+                     throw new Error("Gemini API key is not set. Please add your API key to the code.");
+                }
+
                 const prompt = `تلخيص وصف الخبر التالي في بضع جمل باللغة العربية: \n\n${description}`;
                 const payload = {
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                 };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -345,6 +362,16 @@
             chatInput.value = '';
             chatLog.scrollTop = chatLog.scrollHeight; // Scroll to bottom
 
+            // Check for Gemini API key before making the call
+            if (!GEMINI_API_KEY) {
+                const errorMessageDiv = document.createElement('div');
+                errorMessageDiv.className = 'chat-message minray-message text-red-500';
+                errorMessageDiv.textContent = 'خطأ: لم يتم إضافة مفتاح Gemini API. يرجى إضافة مفتاحك لإصلاح المشكلة.';
+                chatLog.appendChild(errorMessageDiv);
+                chatLog.scrollTop = chatLog.scrollHeight;
+                return;
+            }
+
             let minrayResponse = '';
 
             // Check for specific developer query
@@ -375,8 +402,8 @@
                 const payload = {
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                 };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
