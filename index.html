@@ -485,7 +485,7 @@
         // Initialize Firebase
         let app, auth, db;
         let userId = null;
-        let isAuthReady = false;
+        let userName = 'صديقي';
 
         // DOM Elements
         const chatLog = document.getElementById('chatLog');
@@ -511,8 +511,7 @@
         let activeConversationId = null;
         let isWaitingForResponse = false;
         let pendingDelete = { convId: null, element: null };
-        let userName = 'صديقي'; // Added to make the app more personal
-
+        
         // System prompt for Onra's personality
         const systemPrompt = `
             أنت أونرا، مساعد ذكي وودود، وصديق للإنسان. تتحدث بأسلوب مرح وعاطفي مثل صديق قديم.
@@ -636,47 +635,54 @@
             });
         };
 
-        // Initialize the app on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            // Immediately enable UI for responsiveness
-            setupUIAndListeners();
-            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
-
-            // Initialize Firebase and handle authentication in the background
+        // Initialize Firebase and the app
+        const initializeFirebaseAndApp = async () => {
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        loginButtons.classList.add('hidden');
-                        userInfo.classList.remove('hidden');
-                        userName = user.displayName || 'صديقي';
-                        userNameSpan.innerText = `مرحباً، ${userName}!`;
-                        loadConversations();
-                    } else {
-                        try {
-                            // If initial auth token is provided, sign in with it.
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                // Otherwise, sign in anonymously.
-                                await signInAnonymously(auth);
+                // Wait for auth state to be ready
+                await new Promise(resolve => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            userInfo.classList.remove('hidden');
+                            userName = user.displayName || 'صديقي';
+                            userNameSpan.innerText = `مرحباً، ${userName}!`;
+                            loadConversations();
+                            resolve();
+                        } else {
+                            try {
+                                if (initialAuthToken) {
+                                    await signInWithCustomToken(auth, initialAuthToken);
+                                } else {
+                                    await signInAnonymously(auth);
+                                }
+                            } catch (e) {
+                                console.error("خطأ في تسجيل الدخول:", e);
+                                // The user can still use the app without persistence
+                                appendMessage("عذراً، لم نتمكن من تسجيل دخولك. قد لا يتم حفظ محادثاتك.", "onra");
+                            } finally {
+                                resolve();
                             }
-                        } catch (error) {
-                            console.error("خطأ في تسجيل الدخول المجهول:", error);
-                            appendMessage("عذراً، لم نتمكن من تسجيل دخولك بشكل آمن. قد لا يتم حفظ محادثاتك.", "onra");
                         }
-                    }
+                        unsubscribe();
+                    });
                 });
+
+                // Now that auth is ready, set up the UI
+                setupUIAndListeners();
+                appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
+
             } catch (e) {
                 console.error("خطأ في تهيئة Firebase:", e);
                 appendMessage("عذراً، لم نتمكن من الاتصال بالخدمات. قد لا يتم حفظ محادثاتك.", "onra");
             }
-        });
+        };
+
+        // Initialize the app on page load
+        document.addEventListener('DOMContentLoaded', initializeFirebaseAndApp);
 
         // Handle user logout
         const handleLogout = async () => {
