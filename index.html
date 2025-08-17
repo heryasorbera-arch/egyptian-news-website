@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أخبار مصر وأسعار الذهب</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a clean look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .gold-card {
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 2px solid #FFD700;
+        }
+        .clock-card {
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 2px solid #4A90E2;
+        }
+        .news-card {
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .news-item:not(:last-child) {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .skeleton {
+            animation: pulse 1.5s infinite;
+            background-color: #e2e8f0;
+            border-radius: 8px;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        /* Modal for summary */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+        }
+        /* Chatbot specific styles */
+        .chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99;
+            width: 60px;
+            height: 60px;
+            background-color: #4A90E2;
+            color: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .chat-button:hover {
+            transform: scale(1.1);
+            background-color: #357ABD;
+        }
+        .chat-modal-content {
+            height: 80vh;
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-log {
+            flex-grow: 1;
+            overflow-y: auto;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px;
+            background-color: #f9fafb;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            max-width: 80%;
+            padding: 10px;
+            border-radius: 16px;
+        }
+        .user-message {
+            background-color: #d1e7ff;
+            align-self: flex-start;
+        }
+        .minray-message {
+            background-color: #e2f0d1;
+            align-self: flex-end;
+        }
+        .chat-input-container {
+            display: flex;
+            padding: 16px;
+        }
+        .chat-input-container input {
+            flex-grow: 1;
+            border-radius: 20px;
+            padding: 8px 16px;
+            border: 1px solid #cbd5e1;
+            outline: none;
+        }
+        .chat-input-container button {
+            background-color: #4A90E2;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-right: 8px;
+            transition: all 0.2s;
+        }
+        .chat-input-container button:hover {
+            background-color: #357ABD;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="container mx-auto">
+        <!-- Header -->
+        <header class="text-center my-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">أخبار مصر وأسعار الذهب والوقت الحالي</h1>
+            <p class="text-lg text-gray-600 mt-2">آخر الأخبار وأسعار الذهب</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Gold and Clock Sections -->
+            <aside class="lg:col-span-1 space-y-8">
+                <div class="gold-card rounded-3xl p-6 transition-all duration-300 transform hover:scale-105">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">أسعار الذهب</h2>
+                    <div id="gold-prices" class="space-y-4">
+                        <div class="flex justify-between items-center h-8 skeleton"></div>
+                        <div class="flex justify-between items-center h-8 skeleton"></div>
+                        <div class="flex justify-between items-center h-8 skeleton"></div>
+                    </div>
+                </div>
+
+                <!-- Live Clock Card - Replaces Weather -->
+                <div class="clock-card rounded-3xl p-6 transition-all duration-300 transform hover:scale-105">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">الوقت الحالي</h2>
+                    <div id="live-clock" class="space-y-4">
+                         <div class="flex flex-col items-center justify-center p-4">
+                            <span id="current-time" class="text-4xl md:text-5xl font-bold text-gray-800">--:--:--</span>
+                            <span id="current-date" class="text-lg text-gray-600 mt-2">--- --- --, ----</span>
+                         </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main News Section -->
+            <main class="lg:col-span-3">
+                <div class="news-card rounded-3xl p-6 mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">أحدث الأخبار</h2>
+                    <div id="news-container" class="space-y-4">
+                        <div class="h-24 skeleton mb-4"></div>
+                        <div class="h-24 skeleton mb-4"></div>
+                        <div class="h-24 skeleton mb-4"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- The Modal for Summary -->
+    <div id="summaryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 id="summaryTitle" class="text-2xl font-bold text-gray-800 mb-4">ملخص الخبر</h3>
+            <p id="summaryText" class="text-gray-700"></p>
+        </div>
+    </div>
+
+    <!-- The Chatbot Modal -->
+    <div id="chatModal" class="modal">
+        <div class="modal-content chat-modal-content">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-200">
+                <h3 class="text-2xl font-bold text-gray-800">مينراي (Minray)</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div id="chatLog" class="chat-log">
+                <div class="chat-message minray-message">أهلاً بك! أنا مينراي، مساعدك الذكي للأخبار. اسألني أي حاجة!</div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." class="text-right" />
+                <button id="sendChatBtn">
+                    <svg xmlns="http://www.w3.org/2-24/24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Floating Button -->
+    <div id="openChatBtn" class="chat-button flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2-24/24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm2.5-1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 4.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Zm-2.5 1.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h.008v.008h-.008V12Z" />
+        </svg>
+    </div>
+
+    <script>
+        // NOTE: Please replace with your own valid GNews API key from your GNews dashboard
+        const NEWS_API_KEY = "98062c510f76a9c5952701c56b69f48b"; 
+        // This is the user's provided API key for GoldAPI.io
+        const GOLD_API_KEY = "goldapi-13ywsmef5gjs9-io"; 
+
+        // Function to fetch and display gold prices
+        const fetchGoldPrices = async () => {
+            const goldPricesContainer = document.getElementById('gold-prices');
+            const goldApiUrl = `https://www.goldapi.io/api/XAU/EGP`;
+
+            try {
+                const response = await fetch(goldApiUrl, {
+                    headers: { 'x-access-token': GOLD_API_KEY }
+                });
+                if (!response.ok) {
+                    throw new Error(`خطأ في جلب بيانات الذهب: ${response.statusText}`);
+                }
+                const data = await response.json();
+                const prices = {
+                    'عيار 24': (data.price_gram_24k).toFixed(2),
+                    'عيار 21': (data.price_gram_21k).toFixed(2),
+                    'عيار 18': (data.price_gram_18k).toFixed(2)
+                };
+                
+                goldPricesContainer.innerHTML = '';
+                for (const carat in prices) {
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between items-center bg-gray-100 rounded-lg p-3';
+                    item.innerHTML = `
+                        <span class="text-lg text-gray-700">${carat}</span>
+                        <span class="text-xl font-bold text-yellow-600">${prices[carat]} ج.م</span>
+                    `;
+                    goldPricesContainer.appendChild(item);
+                }
+            } catch (error) {
+                console.error(error);
+                goldPricesContainer.innerHTML = `<p class="text-red-500 text-center">لا يمكن عرض أسعار الذهب الآن.</p>`;
+            }
+        };
+
+        // Function to update the live clock
+        const updateClock = () => {
+            const now = new Date();
+            const timeElement = document.getElementById('current-time');
+            const dateElement = document.getElementById('current-date');
+            
+            // Format time with leading zeros
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            // Format date in Arabic
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = now.toLocaleDateString('ar-EG', options);
+
+            timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            dateElement.textContent = formattedDate;
+        };
+
+        // Function to summarize an article description using Gemini API
+        const summarizeArticle = async (description) => {
+            const summaryTextElement = document.getElementById('summaryText');
+            summaryTextElement.textContent = "جاري تلخيص الخبر..."; // Show loading message
+
+            try {
+                const prompt = `تلخيص وصف الخبر التالي في بضع جمل باللغة العربية: \n\n${description}`;
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error.message || response.statusText);
+                }
+
+                const result = await response.json();
+                const summary = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                summaryTextElement.textContent = summary || "لم يتم العثور على ملخص.";
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                summaryTextElement.textContent = `حدث خطأ في جلب الملخص: ${error.message}`;
+            }
+        };
+
+        // Function to handle chatbot interaction
+        const sendChat = async () => {
+            const chatInput = document.getElementById('chatInput');
+            const chatLog = document.getElementById('chatLog');
+            const message = chatInput.value.trim();
+
+            if (message === '') return;
+
+            // Display user message
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'chat-message user-message';
+            userMessageDiv.textContent = message;
+            chatLog.appendChild(userMessageDiv);
+            chatInput.value = '';
+            chatLog.scrollTop = chatLog.scrollHeight; // Scroll to bottom
+
+            let minrayResponse = '';
+
+            // Check for specific developer query
+            if (message.includes('مين طورك') || message.includes('مين عملك')) {
+                minrayResponse = 'أنا من تطوير فريق هرياسور (Harissour).';
+            } else if (message.includes('اسكربت') || message.includes('اكتب') || message.includes('اعملي')) {
+                minrayResponse = 'أنا آسف، أنا مساعد مختص بالأخبار وأسعار الذهب والعملات فقط. لا يمكنني إنشاء محتوى أو سكريبت.';
+            }
+
+            // If a custom response was set, display it immediately
+            if (minrayResponse) {
+                const minrayMessageDiv = document.createElement('div');
+                minrayMessageDiv.className = 'chat-message minray-message';
+                minrayMessageDiv.textContent = minrayResponse;
+                chatLog.appendChild(minrayMessageDiv);
+                chatLog.scrollTop = chatLog.scrollHeight;
+                return;
+            }
+
+            // Display "Minray is typing" message
+            const minrayTypingDiv = document.createElement('div');
+            minrayTypingDiv.className = 'chat-message minray-message skeleton w-40 h-8';
+            chatLog.appendChild(minrayTypingDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+
+            try {
+                const prompt = `أنت مساعد ذكي اسمه مينراي، تعمل في موقع إخباري مصري. هدفك هو الإجابة على أسئلة المستخدم عن الأخبار بطريقة ودودة ولبقة باللغة العربية المصرية. أجب على السؤال التالي بإيجاز ووضوح: \n\n${message}`;
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error.message || response.statusText);
+                }
+
+                const result = await response.json();
+                minrayResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                // Remove the typing indicator
+                chatLog.removeChild(minrayTypingDiv);
+
+                // Display Minray's response
+                const minrayMessageDiv = document.createElement('div');
+                minrayMessageDiv.className = 'chat-message minray-message';
+                minrayMessageDiv.textContent = minrayResponse || "معذرة، لا أستطيع الإجابة الآن. حاول مرة أخرى.";
+                chatLog.appendChild(minrayMessageDiv);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                chatLog.removeChild(minrayTypingDiv);
+                const errorMessageDiv = document.createElement('div');
+                errorMessageDiv.className = 'chat-message minray-message text-red-500';
+                errorMessageDiv.textContent = `حدث خطأ: ${error.message}`;
+                chatLog.appendChild(errorMessageDiv);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+        };
+
+        // Function to fetch and display news
+        const fetchAllNews = async () => {
+            const newsContainer = document.getElementById('news-container');
+            
+            try {
+                // Fetch Egyptian news
+                const egyptianNewsUrl = `https://gnews.io/api/v4/top-headlines?country=eg&lang=ar&token=${NEWS_API_KEY}`;
+                const egyptianResponse = await fetch(egyptianNewsUrl);
+                if (!egyptianResponse.ok) {
+                     const errorData = await egyptianResponse.json();
+                     throw new Error(errorData.errors ? errorData.errors.join(", ") : egyptianResponse.statusText);
+                }
+                const egyptianData = await egyptianResponse.json();
+                const egyptianArticles = egyptianData.articles || [];
+
+                // Fetch International news
+                const internationalNewsUrl = `https://gnews.io/api/v4/search?q=أخبار دولية&lang=ar&token=${NEWS_API_KEY}`;
+                const internationalResponse = await fetch(internationalNewsUrl);
+                if (!internationalResponse.ok) {
+                     const errorData = await internationalResponse.json();
+                     throw new Error(errorData.errors ? errorData.errors.join(", ") : internationalResponse.statusText);
+                }
+                const internationalData = await internationalResponse.json();
+                const internationalArticles = internationalData.articles || [];
+                
+                // Combine and display all articles
+                const allArticles = [...egyptianArticles, ...internationalArticles];
+                
+                newsContainer.innerHTML = '';
+                if (allArticles.length > 0) {
+                    allArticles.forEach(article => {
+                        const newsElement = document.createElement('div');
+                        newsElement.className = 'news-item p-4 flex flex-col justify-between';
+                        newsElement.innerHTML = `
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-800">${article.title}</h3>
+                                <p class="text-sm text-gray-500 mt-1">${article.source.name}</p>
+                            </div>
+                            <div class="mt-4 flex flex-row-reverse justify-between items-center">
+                                <a href="${article.url}" target="_blank" class="text-blue-500 hover:underline text-sm block">اقرأ المزيد</a>
+                                <button class="summarize-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-sm hover:bg-gray-300 transition-colors">✨ تلخيص</button>
+                            </div>
+                        `;
+                        newsElement.querySelector('.summarize-btn').addEventListener('click', () => {
+                            showSummaryModal(article.title);
+                            summarizeArticle(article.description);
+                        });
+                        newsContainer.appendChild(newsElement);
+                    });
+                } else {
+                    newsContainer.innerHTML = `<p class="text-gray-500 text-center">لا توجد أخبار متاحة الآن. يرجى التأكد من صلاحية مفتاح GNews API.</p>`;
+                }
+            } catch (error) {
+                console.error(error);
+                newsContainer.innerHTML = `<p class="text-red-500 text-center">خطأ في جلب الأخبار: ${error.message}</p>`;
+            }
+        };
+
+        // Modal functions
+        const summaryModal = document.getElementById('summaryModal');
+        const summaryTitle = document.getElementById('summaryTitle');
+        const summaryText = document.getElementById('summaryText');
+        const chatModal = document.getElementById('chatModal');
+        
+        const showSummaryModal = (title) => {
+            summaryModal.style.display = 'block';
+            summaryTitle.textContent = "ملخص الخبر: " + title;
+            summaryText.textContent = "جاري تلخيص الخبر...";
+        };
+
+        const hideModal = (modal) => {
+             modal.style.display = 'none';
+        }
+
+        document.getElementById('openChatBtn').addEventListener('click', () => {
+            chatModal.style.display = 'block';
+        });
+
+        const modalCloseButtons = document.querySelectorAll('.modal .close-button');
+        modalCloseButtons.forEach(button => {
+            button.onclick = () => {
+                hideModal(button.closest('.modal'));
+            };
+        });
+
+        window.onclick = (event) => {
+            if (event.target == summaryModal) {
+                hideModal(summaryModal);
+            }
+            if (event.target == chatModal) {
+                hideModal(chatModal);
+            }
+        };
+
+        // Chatbot event listeners
+        document.getElementById('sendChatBtn').addEventListener('click', sendChat);
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChat();
+            }
+        });
+
+        // Initial calls to populate the page
+        fetchAllNews();
+        fetchGoldPrices();
+        updateClock(); // Initial call to display the time immediately
+        
+        // Set an interval for periodic updates
+        setInterval(fetchGoldPrices, 60000); // Update gold prices every 60 seconds
+        setInterval(fetchAllNews, 300000); // Update all news every 5 minutes (300,000 ms)
+        setInterval(updateClock, 1000); // Update the clock every second
+    </script>
+</body>
+</html>
