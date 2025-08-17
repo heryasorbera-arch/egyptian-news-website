@@ -487,8 +487,22 @@
 
         // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --------------------------------------------------------------------------
+        // هام: هذا هو المكان الذي يجب أن تضيف فيه إعدادات Firebase الخاصة بك.
+        // احصل عليها من Firebase Console -> Project settings -> General
+        // إذا كنت تقوم بتشغيل التطبيق محليًا، قم بإلغاء التعليق على السطر التالي.
+        // تأكد من أن قيمك صحيحة.
+        // --------------------------------------------------------------------------
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // apiKey: "YOUR_API_KEY",
+            // authDomain: "YOUR_AUTH_DOMAIN",
+            // projectId: "YOUR_PROJECT_ID",
+            // storageBucket: "YOUR_STORAGE_BUCKET",
+            // messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            // appId: "YOUR_APP_ID"
+        };
 
         // API key for Gemini and Imagen models (left empty for Canvas environment)
         const apiKey = "";
@@ -680,7 +694,7 @@
                             statusIndicator.classList.add('text-green-400');
                             loadConversations();
                             setupUIAndListeners();
-                            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
+                            appendMessage(`أهلاً بك! أنا اونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
                         } else {
                             // User is null, handle sign-in or offline mode
                             isAuthReady = false;
@@ -706,7 +720,7 @@
                                     statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
                                     statusIndicator.classList.add('text-red-400');
                                     setupUIAndListeners();
-                                    appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
+                                    appendMessage(`أهلاً بك! أنا اونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
                                 }
                             }
                         }
@@ -720,7 +734,7 @@
                     statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
                     statusIndicator.classList.add('text-red-400');
                     setupUIAndListeners();
-                    appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
+                    appendMessage(`أهلاً بك! أنا اونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
                 }
             } else {
                 // Handle local execution where Firebase config is not available
@@ -731,7 +745,7 @@
                 statusIndicator.classList.add('text-red-400');
                 conversationList.innerHTML = `<div class="p-4 text-center text-gray-400">لا يمكن حفظ المحادثات في هذا الوضع.</div>`;
                 setupUIAndListeners();
-                appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
+                appendMessage(`أهلاً بك! أنا اونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
             }
         };
 
@@ -761,7 +775,7 @@
             activeConversationId = null;
             chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
             chatLog.innerHTML = '';
-            appendMessage(`أهلاً بك يا ${userName}! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
+            appendMessage(`أهلاً بك يا ${userName}! أنا اونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
             // Remove active class from all sidebar items
             document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
         };
