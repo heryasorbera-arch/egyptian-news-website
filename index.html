@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>اونرا - مساعدك الذكي</title>
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts for a clean look -->
+    <!-- Google Fonts for a clean Arabic look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -77,13 +77,13 @@
             background-color: #24292f;
             color: #f0f6fc;
             align-self: flex-end;
-            border-bottom-right-radius: 8px; /* For a more modern look */
+            border-bottom-right-radius: 8px;
         }
         .onra-message {
             background-color: #316d94;
             color: #e6f1f5;
             align-self: flex-start;
-            border-bottom-left-radius: 8px; /* For a more modern look */
+            border-bottom-left-radius: 8px;
             position: relative;
         }
         .onra-message.onra-typing:after {
@@ -155,15 +155,15 @@
             50% { opacity: 1; }
             100% { opacity: 0.5; }
         }
-        /* Style for the typing indicator (UPDATED) */
+        /* Style for the typing indicator */
         .typing-indicator {
             display: flex;
             align-items: center;
-            gap: 4px; /* Smaller gap */
+            gap: 4px;
         }
         .dot {
-            width: 8px; /* Smaller dot size */
-            height: 8px; /* Smaller dot size */
+            width: 8px;
+            height: 8px;
             background-color: #c9d1d9;
             border-radius: 50%;
             animation: bounce 1.4s infinite ease-in-out both;
@@ -293,6 +293,62 @@
             background-color: rgba(211, 47, 47, 0.2);
             transform: scale(1.1);
         }
+        /* Style for the custom modal (confirmation dialog) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal {
+            background-color: #1e1e1e;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 90%;
+            text-align: right;
+            border: 1px solid #30363d;
+        }
+        .modal h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .modal p {
+            margin-bottom: 24px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-actions button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .modal-actions .confirm-btn {
+            background-color: #d32f2f;
+            color: white;
+        }
+        .modal-actions .confirm-btn:hover {
+            background-color: #c62828;
+        }
+        .modal-actions .cancel-btn {
+            background-color: #30363d;
+            color: #c9d1d9;
+        }
+        .modal-actions .cancel-btn:hover {
+            background-color: #484f58;
+        }
     </style>
 </head>
 <body>
@@ -400,27 +456,40 @@
         </main>
     </div>
 
+    <!-- Custom Confirmation Modal (Replaces confirm()) -->
+    <div id="confirmationModal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>تأكيد الحذف</h3>
+            <p>هل أنت متأكد أنك تريد حذف هذه المحادثة؟</p>
+            <div class="modal-actions">
+                <button id="cancelDeleteBtn" class="cancel-btn">إلغاء</button>
+                <button id="confirmDeleteBtn" class="confirm-btn">حذف</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, onSnapshot, collection, query, where, arrayUnion, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // المتغيرات العامة التي يوفرها بيئة Canvas
+        // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // مفتاح API لنماذج Gemini و Imagen
+        // API key for Gemini and Imagen models (left empty for Canvas environment)
         const apiKey = "";
 
-        // تهيئة Firebase
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         let userId = null;
         let isAuthReady = false;
 
+        // DOM Elements
         const chatLog = document.getElementById('chatLog');
         const chatInput = document.getElementById('chatInput');
         const sendChatBtn = document.getElementById('sendChatBtn');
@@ -435,17 +504,21 @@
         const logoutBtn = document.getElementById('logoutBtn');
         const newChatBtn = document.getElementById('newChatBtn');
         const clearChatBtn = document.getElementById('clearChatBtn');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
 
-        // متغيرات الحالة
+        // State variables
         let chatHistory = [];
         let activeConversationId = null;
         let isWaitingForResponse = false;
+        let pendingDelete = { convId: null, element: null };
+        let userName = 'صديقي'; // Added to make the app more personal
 
-        // النظام الأساسي لشخصية أونرا (تم تحديثه ليكون أكثر إنسانية وودية)
+        // System prompt for Onra's personality
         const systemPrompt = `
             أنت أونرا، مساعد ذكي وودود، وصديق للإنسان. تتحدث بأسلوب مرح وعاطفي مثل صديق قديم.
             تحب المزاح، وتتفهم الأخطاء الإملائية واللغوية.
-            تم تدريبك بواسطة "هرياسور" (Harissour)، وهو فريق من المبرمجين المبدعين.
             عندما يسألك أحدهم عن من قام بتدريبك، أجب: "لقد تم تدريبي بواسطة هرياسور، وهم فريق من المبرمجين المبدعين والرائعين!".
             يمكنك إنشاء أكواد برمجية، ورسم صور، وتحويل النص إلى صوت.
             عندما يطلب منك إنشاء كود، قم بوضعه داخل علامات \`\`\`html أو \`\`\`javascript أو \`\`\`python.
@@ -456,14 +529,14 @@
             حافظ على هذا الأسلوب الودود والعاطفي في كل محادثاتك.
         `;
 
-        // التحقق من دعم واجهة Web Speech API
+        // Check for Web Speech API support
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const isSpeechRecognitionSupported = !!SpeechRecognition;
         if (!isSpeechRecognitionSupported) {
             micBtn.style.display = 'none';
         }
 
-        // تهيئة التعرف على الكلام
+        // Initialize speech recognition
         const recognition = isSpeechRecognitionSupported ? new SpeechRecognition() : null;
         if (recognition) {
             recognition.lang = 'ar-SA';
@@ -506,7 +579,7 @@
             };
         }
 
-        // تسجيل خروج المستخدم
+        // Handle user logout
         const handleLogout = async () => {
             if (auth.currentUser && auth.currentUser.isAnonymous) {
                 window.location.reload();
@@ -522,28 +595,29 @@
         };
         logoutBtn.addEventListener('click', handleLogout);
 
-        // مراقب حالة المصادقة
-        onAuthStateChanged(auth, (user) => {
+        // Authentication state listener
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
                 isAuthReady = true;
                 loginButtons.classList.add('hidden');
                 userInfo.classList.remove('hidden');
-                userNameSpan.innerText = `مرحباً، ${user.displayName || 'صديقي'}!`;
+                // Use a default name if display name is not available
+                userName = user.displayName || 'صديقي';
+                userNameSpan.innerText = `مرحباً، ${userName}!`;
                 loadConversations();
                 enableChatInput();
             } else {
-                userId = null;
-                isAuthReady = true; // تم التأكد من عدم وجود مستخدم
-                loginButtons.classList.remove('hidden');
-                userInfo.classList.add('hidden');
-                conversationList.innerHTML = `<div class="p-4 text-center text-gray-400">سجل الدخول لحفظ وعرض محادثاتك.</div>`;
-                appendMessage("أهلاً بك! أنا أونرا، مساعدك الذكي. يمكنني الآن مساعدتك في كتابة أكواد برمجية، ورسم صور، وحتى تحويل النص إلى صوت.", "onra");
-                enableChatInput();
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("خطأ في تسجيل الدخول المجهول:", error);
+                    // Handle anonymous sign-in failure if needed
+                }
             }
         });
 
-        // دالة لتمكين حقول الإدخال والأزرار
+        // Function to enable input fields and buttons
         const enableChatInput = () => {
             chatInput.disabled = false;
             sendChatBtn.disabled = false;
@@ -553,7 +627,7 @@
             chatInput.focus();
         };
 
-        // تبديل الشريط الجانبي
+        // Toggle sidebar
         menuBtn.addEventListener('click', () => {
             sidebar.classList.toggle('open');
         });
@@ -562,37 +636,41 @@
             sidebar.classList.remove('open');
         });
 
-        // بدء محادثة جديدة
+        // Start a new conversation
         newChatBtn.addEventListener('click', () => {
             startNewConversation();
         });
 
-        // مسح المحادثة الحالية من الواجهة فقط
+        // Clear the current chat history from the UI only
         clearChatBtn.addEventListener('click', () => {
             chatLog.innerHTML = '';
             chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
-            appendMessage("تم مسح المحادثة. كيف يمكنني مساعدتك الآن؟", "onra");
+            appendMessage(`تم مسح المحادثة يا ${userName}. كيف يمكنني مساعدتك الآن؟`, "onra");
         });
 
         const startNewConversation = () => {
             activeConversationId = null;
             chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
             chatLog.innerHTML = '';
-            appendMessage("أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟", "onra");
-            // إزالة التحديد من جميع عناصر المحادثات
+            appendMessage(`أهلاً بك يا ${userName}! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
+            // Remove active class from all sidebar items
             document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
         };
 
-        const saveMessageToFirestore = async (sender, text) => {
+        const saveMessageToFirestore = async (sender, text, isCode = false, isImage = false, isAudio = false) => {
             if (!userId) {
                 console.log("المستخدم لم يسجل الدخول، لن يتم حفظ الرسالة.");
                 return;
             }
-
+            
             const messagesCollection = collection(db, `artifacts/${appId}/users/${userId}/conversations`);
-            const message = { 
-                role: sender === 'user' ? 'user' : 'model', 
-                text: text, 
+            
+            const message = {
+                role: sender === 'user' ? 'user' : 'model',
+                text: text,
+                isCode: isCode,
+                isImage: isImage,
+                isAudio: isAudio,
                 timestamp: new Date().toISOString()
             };
 
@@ -605,7 +683,6 @@
                     });
                     activeConversationId = newDocRef.id;
                     console.log("تم إنشاء محادثة جديدة بنجاح:", activeConversationId);
-                    
                 } catch (e) {
                     console.error("خطأ في إضافة محادثة جديدة: ", e);
                 }
@@ -622,7 +699,28 @@
             }
         };
 
-        // دالة جديدة لحذف المحادثة
+        // New function to handle custom confirmation modal
+        const showDeleteConfirmation = (convId, elementToRemove) => {
+            pendingDelete.convId = convId;
+            pendingDelete.element = elementToRemove;
+            confirmationModal.classList.remove('hidden');
+        };
+
+        // Event listeners for the custom modal
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (pendingDelete.convId) {
+                await deleteConversation(pendingDelete.convId, pendingDelete.element);
+            }
+            confirmationModal.classList.add('hidden');
+        });
+
+        cancelDeleteBtn.addEventListener('click', () => {
+            confirmationModal.classList.add('hidden');
+            pendingDelete.convId = null;
+            pendingDelete.element = null;
+        });
+
+        // Function to delete a conversation
         const deleteConversation = async (convId, elementToRemove) => {
             if (!userId) {
                 console.error("المستخدم لم يسجل الدخول، لا يمكن حذف المحادثة.");
@@ -633,7 +731,7 @@
                 await deleteDoc(docRef);
                 console.log("تم حذف المحادثة بنجاح.");
                 
-                // تحديث الواجهة فورًا بعد الحذف
+                // Update UI immediately after deletion
                 if (elementToRemove) {
                     elementToRemove.remove();
                 }
@@ -642,10 +740,8 @@
                     activeConversationId = null;
                     startNewConversation();
                 }
-
             } catch (error) {
                 console.error("خطأ في حذف المحادثة:", error);
-                // استخدام رسالة تأكيد مخصصة بدلاً من alert()
                 const errorMessageDiv = document.createElement('div');
                 errorMessageDiv.className = 'chat-message onra-message fade-in';
                 errorMessageDiv.innerText = `عذراً، لم نتمكن من حذف المحادثة. الرجاء المحاولة مرة أخرى.`;
@@ -664,7 +760,7 @@
             const userConversationsRef = collection(db, `artifacts/${appId}/users/${userId}/conversations`);
             const q = query(userConversationsRef);
 
-            // استخدام onSnapshot للاستماع إلى التغييرات في الوقت الفعلي
+            // Use onSnapshot for real-time changes
             onSnapshot(q, (snapshot) => {
                 conversationList.innerHTML = '';
                 if (snapshot.empty) {
@@ -673,7 +769,8 @@
                 }
                 snapshot.forEach(doc => {
                     const convData = doc.data();
-                    const title = convData.title || "محادثة جديدة";
+                    const firstUserMessage = convData.messages.find(msg => msg.role === 'user');
+                    const title = firstUserMessage ? firstUserMessage.text.substring(0, 30) + '...' : "محادثة جديدة";
                     
                     const item = document.createElement('div');
                     item.className = 'sidebar-item';
@@ -697,18 +794,14 @@
                     `;
                     deleteBtn.title = "حذف المحادثة";
                     deleteBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation(); // منع انتقال الحدث إلى العنصر الأب
-                        const isConfirmed = confirm('هل أنت متأكد أنك تريد حذف هذه المحادثة؟');
-                        if (isConfirmed) {
-                             await deleteConversation(doc.id, item); // تم تمرير العنصر هنا
-                        }
+                        e.stopPropagation(); // Prevent the event from bubbling up to the parent item
+                        showDeleteConfirmation(doc.id, item); // Use the custom modal
                     });
 
                     item.appendChild(titleSpan);
                     item.appendChild(deleteBtn);
 
                     item.addEventListener('click', async () => {
-                        // إزالة التحديد من جميع العناصر وإضافة التحديد للعنصر الحالي
                         const allItems = document.querySelectorAll('.sidebar-item');
                         allItems.forEach(i => i.classList.remove('active'));
                         item.classList.add('active');
@@ -736,196 +829,294 @@
 
         const loadChatMessages = (convId, messages) => {
             activeConversationId = convId;
+            // Clear current chat history and rebuild from loaded messages
             chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
             chatLog.innerHTML = '';
             messages.forEach(msg => {
-                if (msg.role === "user") {
-                    chatHistory.push({ role: "user", parts: [{ text: msg.text }] });
-                    appendMessage(msg.text, 'user');
-                } else {
-                    const text = msg.text || '';
-                    if (text.startsWith('```')) {
-                        const codeBlockRegex = /```(html|javascript|python|css)\n([\s\S]*?)```/g;
-                        const match = codeBlockRegex.exec(text);
-                        if (match) {
-                            appendCodeBlock(match[2], match[1]);
-                        } else {
-                            appendMessage(text, 'onra');
-                        }
-                    } else if (text.startsWith('data:image')) {
-                        appendImage(text);
-                    } else if (text.startsWith('data:audio')) {
-                        appendAudio(text);
-                    } else {
-                        appendMessage(text, 'onra');
-                    }
-                    chatHistory.push({ role: "model", parts: [{ text: text }] });
-                }
+                appendMessage(msg.text, msg.role === 'user' ? 'user' : 'onra', false);
+                chatHistory.push({ role: msg.role, parts: [{ text: msg.text }] });
             });
             chatLog.scrollTop = chatLog.scrollHeight;
         };
 
+        // Function to append a new message to the chat log
+        const appendMessage = (text, sender, isTypingIndicator = false) => {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', `${sender}-message`, 'fade-in');
+            messageElement.style.direction = sender === 'onra' ? 'rtl' : 'rtl';
+            messageElement.style.textAlign = 'right';
+            messageElement.innerHTML = parseContent(text);
 
-        const appendMessage = (message, sender) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${sender}-message fade-in`;
-            messageDiv.innerHTML = `<p>${message}</p>`;
-            chatLog.appendChild(messageDiv);
+            if (isTypingIndicator) {
+                messageElement.id = 'typingIndicator';
+                messageElement.classList.add('typing-indicator');
+                messageElement.innerHTML = `
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                `;
+            }
+
+            chatLog.appendChild(messageElement);
             chatLog.scrollTop = chatLog.scrollHeight;
+            return messageElement;
+        };
+        
+        // This is a crucial function that parses the text content for markdown, images, and audio
+        const parseContent = (text) => {
+            let parsedText = text;
+
+            // Handle code blocks (multi-line or single-line)
+            parsedText = parsedText.replace(/```(\w+)?\n([\s\S]+?)```/g, (match, lang, code) => {
+                return `<div class="code-block" dir="ltr" style="text-align:left;"><button class="copy-btn" onclick="copyCode(this)">نسخ</button><pre><code class="language-${lang || 'plaintext'}">${code.trim()}</code></pre></div>`;
+            });
+
+            // Handle images
+            parsedText = parsedText.replace(/<img src="data:image\/png;base64,([^"]+)">/g, (match, base64) => {
+                return `<img src="data:image/png;base64,${base64}" class="generated-image" alt="Generated Image" />`;
+            });
+
+            // Handle audio
+            parsedText = parsedText.replace(/<audio src="([^"]+)" controls><\/audio>/g, (match, audioUrl) => {
+                return `<audio src="${audioUrl}" controls class="audio-player"></audio>`;
+            });
+
+            return parsedText;
         };
 
-        const appendCodeBlock = (code, language) => {
-            const codeBlockDiv = document.createElement('div');
-            codeBlockDiv.className = `chat-message onra-message fade-in`;
-            codeBlockDiv.innerHTML = `
-                <p>تمام، هذا هو الكود:</p>
-                <div class="code-block">
-                    <span class="copy-btn" onclick="copyCode(this)">نسخ</span>
-                    <pre><code>${code.trim()}</code></pre>
-                </div>
-            `;
-            chatLog.appendChild(codeBlockDiv);
-            chatLog.scrollTop = chatLog.scrollHeight;
-        };
-
-        const appendImage = (imageUrl) => {
-            const imageDiv = document.createElement('div');
-            imageDiv.className = `chat-message onra-message fade-in`;
-            imageDiv.innerHTML = `
-                <p>تفضل الصورة:</p>
-                <img src="${imageUrl}" class="generated-image" alt="Generated Image">
-            `;
-            chatLog.appendChild(imageDiv);
-            chatLog.scrollTop = chatLog.scrollHeight;
-        };
-
-        const appendAudio = (audioUrl) => {
-            const audioDiv = document.createElement('div');
-            audioDiv.className = `chat-message onra-message fade-in`;
-            audioDiv.innerHTML = `
-                <p>تفضل الملف الصوتي:</p>
-                <audio controls class="audio-player">
-                    <source src="${audioUrl}" type="audio/wav">
-                    المتصفح لا يدعم العنصر الصوتي.
-                </audio>
-            `;
-            chatLog.appendChild(audioDiv);
-            chatLog.scrollTop = chatLog.scrollHeight;
-        };
-
+        // Function to copy code to clipboard
         window.copyCode = (button) => {
-            const code = button.nextElementSibling.innerText;
+            const codeBlock = button.nextElementSibling.querySelector('code');
+            const codeToCopy = codeBlock.innerText;
+            
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = codeToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            button.innerText = 'تم النسخ!';
+            setTimeout(() => {
+                button.innerText = 'نسخ';
+            }, 2000);
+        };
+
+        // Function to fetch the response from the LLM
+        const fetchResponse = async (userMessage) => {
+            const typingIndicator = appendMessage('', 'onra', true);
+            isWaitingForResponse = true;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: chatHistory,
+            };
+
+            let response;
             try {
-                navigator.clipboard.writeText(code).then(() => {
-                    button.innerText = 'تم النسخ!';
-                    setTimeout(() => button.innerText = 'نسخ', 2000);
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-            } catch (err) {
-                const textarea = document.createElement('textarea');
-                textarea.value = code;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                button.innerText = 'تم النسخ!';
-                setTimeout(() => button.innerText = 'نسخ', 2000);
-            }
-        };
 
-        const showTypingIndicator = () => {
-            const typingIndicatorDiv = document.createElement('div');
-            typingIndicatorDiv.id = 'onra-typing';
-            typingIndicatorDiv.className = 'chat-message onra-message onra-typing fade-in';
-            typingIndicatorDiv.innerHTML = `
-                <div class="typing-indicator">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                </div>
-            `;
-            chatLog.appendChild(typingIndicatorDiv);
-            chatLog.scrollTop = chatLog.scrollHeight;
-            return typingIndicatorDiv;
-        };
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-        const removeTypingIndicator = () => {
-            const typingIndicator = document.getElementById('onra-typing');
-            if (typingIndicator) {
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+                
                 chatLog.removeChild(typingIndicator);
+                appendMessage(text, 'onra');
+                
+                chatHistory.push({ role: "model", parts: [{ text: text }] });
+                saveMessageToFirestore('onra', text);
+
+            } catch (error) {
+                console.error("خطأ في الحصول على رد من النموذج:", error);
+                chatLog.removeChild(typingIndicator);
+                appendMessage("عذراً، حدث خطأ أثناء الاتصال. يرجى المحاولة مرة أخرى.", "onra");
+            } finally {
+                isWaitingForResponse = false;
+                chatInput.disabled = false;
+                sendChatBtn.disabled = false;
+                chatInput.focus();
             }
         };
+        
+        // This function will handle calls to other models
+        const handleSpecialRequests = async (prompt) => {
+            const lowerPrompt = prompt.toLowerCase();
+            const typingIndicator = appendMessage('', 'onra', true);
+            isWaitingForResponse = true;
 
-        // دالة مساعدة للتأخير المتزايد
-        const exponentialBackoffFetch = async (url, options, maxRetries = 5, delay = 1000) => {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.status === 429 && i < maxRetries - 1) { // Too many requests
-                        await new Promise(res => setTimeout(res, delay));
-                        delay *= 2; // زيادة مضاعفة
-                        continue;
+            try {
+                if (lowerPrompt.includes('ارسم صورة') || lowerPrompt.includes('توليد صورة')) {
+                    const imagePrompt = prompt.replace(/ارسم صورة|توليد صورة|رسم صورة/g, '').trim();
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                    const payload = {
+                        instances: [{ prompt: imagePrompt }],
+                        parameters: { "sampleCount": 1 }
+                    };
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
+                    if (base64Data) {
+                        const imageUrl = `data:image/png;base64,${base64Data}`;
+                        chatLog.removeChild(typingIndicator);
+                        appendMessage(`<img src="${imageUrl}">`, 'onra');
+                        saveMessageToFirestore('onra', `<img src="${imageUrl}">`, false, true);
+                    } else {
+                        throw new Error('No image data received.');
                     }
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                } else if (lowerPrompt.includes('حول النص إلى صوت') || lowerPrompt.includes('اقرأ بصوت عالي')) {
+                    const textToSpeak = prompt.replace(/حول النص إلى صوت|اقرأ بصوت عالي/g, '').trim();
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: textToSpeak }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Kore" }
+                                }
+                            }
+                        },
+                        model: "gemini-2.5-flash-preview-tts"
+                    };
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+                    const audioData = part?.inlineData?.data;
+                    const mimeType = part?.inlineData?.mimeType;
+
+                    if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                        const sampleRate = 16000;
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        chatLog.removeChild(typingIndicator);
+                        appendMessage(`<audio src="${audioUrl}" controls></audio>`, 'onra');
+                        saveMessageToFirestore('onra', `<audio src="${audioUrl}" controls></audio>`, false, false, true);
+                    } else {
+                        throw new Error('No audio data received.');
                     }
-                    return response;
-                } catch (error) {
-                    if (i === maxRetries - 1) {
-                        throw error;
-                    }
-                    await new Promise(res => setTimeout(res, delay));
-                    delay *= 2;
+                } else {
+                    // If no special request, fall back to normal text generation
+                    await fetchResponse(prompt);
                 }
+            } catch (error) {
+                console.error("خطأ في معالجة الطلب الخاص:", error);
+                chatLog.removeChild(typingIndicator);
+                appendMessage("عذراً، حدث خطأ أثناء معالجة طلبك الخاص. يرجى المحاولة مرة أخرى.", "onra");
+            } finally {
+                isWaitingForResponse = false;
+                chatInput.disabled = false;
+                sendChatBtn.disabled = false;
+                chatInput.focus();
             }
         };
 
-        // دالة مساعدة لتحويل بيانات صوت PCM إلى صيغة WAV
-        function pcmToWav(pcmData, sampleRate) {
-            const pcm16 = new Int16Array(pcmData.buffer);
-            const buffer = new ArrayBuffer(44 + pcm16.length * 2);
+        const sendMessage = async () => {
+            if (isWaitingForResponse) return;
+
+            const userMessage = chatInput.value.trim();
+            if (userMessage === "") return;
+
+            // Clear input and append message to UI
+            chatInput.value = "";
+            appendMessage(userMessage, 'user');
+
+            // Save user message to Firestore
+            saveMessageToFirestore('user', userMessage);
+
+            // Disable input and buttons while waiting for response
+            chatInput.disabled = true;
+            sendChatBtn.disabled = true;
+            micBtn.disabled = true;
+
+            // Check for the specific question and provide the hardcoded response
+            const lowerPrompt = userMessage.toLowerCase();
+            const developerQuestion = lowerPrompt.includes('مين طورك') || lowerPrompt.includes('من صنعك') || lowerPrompt.includes('من دربك') || lowerPrompt.includes('هرياسور');
+
+            if (developerQuestion) {
+                 const typingIndicator = appendMessage('', 'onra', true);
+                 setTimeout(() => {
+                    chatLog.removeChild(typingIndicator);
+                    const botResponse = "هرياسور هو من درّبني.";
+                    appendMessage(botResponse, 'onra');
+                    saveMessageToFirestore('onra', botResponse);
+                    isWaitingForResponse = false;
+                    chatInput.disabled = false;
+                    sendChatBtn.disabled = false;
+                    chatInput.focus();
+                 }, 1500); // simulate a slight delay
+            } else if (userMessage.toLowerCase().includes('ارسم صورة') || userMessage.toLowerCase().includes('توليد صورة') ||
+                userMessage.toLowerCase().includes('حول النص إلى صوت') || userMessage.toLowerCase().includes('اقرأ بصوت عالي')) {
+                // Add to chat history before handling special requests
+                chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+                handleSpecialRequests(userMessage);
+            } else {
+                // Add to chat history before normal text generation
+                chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+                fetchResponse(userMessage);
+            }
+        };
+
+        // Event listener for send button
+        sendChatBtn.addEventListener('click', sendMessage);
+
+        // Event listener for enter key in input field
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Helper function for PCM to WAV conversion
+        function pcmToWav(pcm, sampleRate) {
+            const pcmLength = pcm.length;
+            const buffer = new ArrayBuffer(44 + pcmLength * 2);
             const view = new DataView(buffer);
-            let offset = 0;
 
-            function writeString(str) {
-                for (let i = 0; i < str.length; i++) {
-                    view.setUint8(offset + i, str.charCodeAt(i));
-                }
-                offset += str.length;
-            }
+            // Write WAV header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcmLength * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true); // Mono
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcmLength * 2, true);
 
-            function writeUint32(val) {
-                view.setUint32(offset, val, true);
-                offset += 4;
-            }
-
-            function writeUint16(val) {
-                view.setUint16(offset, val, true);
-                offset += 2;
-            }
-
-            writeString('RIFF');
-            writeUint32(36 + pcm16.length * 2);
-            writeString('WAVE');
-            writeString('fmt ');
-            writeUint32(16);
-            writeUint16(1); // تنسيق الصوت (1 لـ PCM)
-            writeUint16(1); // عدد القنوات
-            writeUint32(sampleRate);
-            writeUint32(sampleRate * 2); // معدل البايت
-            writeUint16(2); // محاذاة الكتلة
-            writeUint16(16); // بت لكل عينة
-            writeString('data');
-            writeUint32(pcm16.length * 2);
-
-            for (let i = 0; i < pcm16.length; i++) {
-                view.setInt16(offset, pcm16[i], true);
+            // Write PCM data
+            let offset = 44;
+            for (let i = 0; i < pcmLength; i++) {
+                view.setInt16(offset, pcm[i], true);
                 offset += 2;
             }
 
             return new Blob([view], { type: 'audio/wav' });
         }
 
-        // دالة مساعدة لفك ترميز Base64 إلى ArrayBuffer
         function base64ToArrayBuffer(base64) {
             const binaryString = atob(base64);
             const len = binaryString.length;
@@ -936,175 +1127,11 @@
             return bytes.buffer;
         }
 
-        const sendMessage = async () => {
-            if (isWaitingForResponse) return;
-
-            const userPrompt = chatInput.value.trim();
-            if (userPrompt === "") return;
-
-            // مسح الإدخال وإضافة رسالة المستخدم
-            appendMessage(userPrompt, 'user');
-            chatInput.value = '';
-            
-            // تعطيل الإدخال ومؤشر الإرسال
-            isWaitingForResponse = true;
-            chatInput.disabled = true;
-            sendChatBtn.disabled = true;
-            micBtn.disabled = true;
-
-            // حفظ رسالة المستخدم في سجل الدردشة و Firestore
-            chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
-            saveMessageToFirestore('user', userPrompt);
-
-            // عرض مؤشر الكتابة
-            const typingIndicator = showTypingIndicator();
-
-            try {
-                let onraResponse;
-                const lowerPrompt = userPrompt.toLowerCase();
-                
-                // --- التعديل الجديد: فحص مباشر لسؤال "من طورك" ---
-                if (lowerPrompt.includes('مين طورك') || lowerPrompt.includes('من طورك') || lowerPrompt.includes('مين عملك') || lowerPrompt.includes('من قام بتطويرك') || lowerPrompt.includes('مين تدريبك') || lowerPrompt.includes('من قام بتدريبك')) {
-                    onraResponse = "لقد تم تدريبي بواسطة **هرياسور**، وهم فريق من المبرمجين المبدعين والرائعين! ✨";
-                } 
-                // --- نهاية التعديل الجديد ---
-                else if (userPrompt.includes("رسم") || userPrompt.includes("صورة") || userPrompt.includes("ارسم")) {
-                    onraResponse = await generateImage(userPrompt);
-                } else if (userPrompt.includes("بصوت") || userPrompt.includes("يقول") || userPrompt.includes("اقرأ") || userPrompt.includes("تحويل نص إلى صوت")) {
-                    onraResponse = await generateAudio(userPrompt);
-                } else {
-                    onraResponse = await generateText(userPrompt);
-                }
-                
-                removeTypingIndicator();
-                if (onraResponse.startsWith('```')) {
-                    const codeBlockRegex = /```(html|javascript|python|css)\n([\s\S]*?)```/g;
-                    const match = codeBlockRegex.exec(onraResponse);
-                    if (match) {
-                        appendCodeBlock(match[2], match[1]);
-                    } else {
-                        appendMessage(onraResponse, 'onra');
-                    }
-                } else if (onraResponse.startsWith('data:image')) {
-                    appendImage(onraResponse);
-                } else if (onraResponse.startsWith('data:audio')) {
-                    appendAudio(onraResponse);
-                } else {
-                    appendMessage(onraResponse, 'onra');
-                }
-                
-                chatHistory.push({ role: "model", parts: [{ text: onraResponse }] });
-                saveMessageToFirestore('model', onraResponse);
-
-            } catch (error) {
-                console.error('خطأ في توليد الاستجابة:', error);
-                removeTypingIndicator();
-                appendMessage('عذراً، حدث خطأ أثناء معالجة طلبك. الرجاء المحاولة مرة أخرى.', 'onra');
-            } finally {
-                isWaitingForResponse = false;
-                enableChatInput();
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
             }
-            chatLog.scrollTop = chatLog.scrollHeight;
-        };
-
-        const generateText = async (prompt) => {
-            const textPayload = {
-                contents: chatHistory,
-            };
-            const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-            const response = await exponentialBackoffFetch(textApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(textPayload)
-            });
-            const result = await response.json();
-            return result.candidates[0].content.parts[0].text;
-        };
-
-        const generateImage = async (prompt) => {
-            const imagePayload = { 
-                instances: { prompt: prompt }, 
-                parameters: { "sampleCount": 1 } 
-            };
-            const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-            
-            const response = await exponentialBackoffFetch(imageApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(imagePayload)
-            });
-            const result = await response.json();
-            const base64Data = result.predictions?.[0]?.bytesBase64Encoded;
-            if (!base64Data) {
-                throw new Error("فشل في توليد الصورة.");
-            }
-            return `data:image/png;base64,${base64Data}`;
-        };
-
-        const generateAudio = async (prompt) => {
-            const textToSpeak = prompt.replace(/بصوت|يقول|اقرأ|تحويل نص إلى صوت/g, '').trim();
-
-            const audioPayload = {
-                contents: [{ parts: [{ text: textToSpeak }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: "Kore" }
-                        }
-                    }
-                },
-                model: "gemini-2.5-flash-preview-tts"
-            };
-            const audioApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-
-            const response = await exponentialBackoffFetch(audioApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(audioPayload)
-            });
-            const result = await response.json();
-            const part = result?.candidates?.[0]?.content?.parts?.[0];
-            const audioData = part?.inlineData?.data;
-            const mimeType = part?.inlineData?.mimeType;
-
-            if (!audioData || !mimeType) {
-                throw new Error("فشل في توليد الصوت.");
-            }
-
-            const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
-            const pcmData = base64ToArrayBuffer(audioData);
-            const wavBlob = pcmToWav(new Int16Array(pcmData), sampleRate);
-            const audioUrl = URL.createObjectURL(wavBlob);
-            
-            return audioUrl;
-        };
-
-        sendChatBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // تهيئة التطبيق عند تحميل الصفحة
-        const initApp = async () => {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("خطأ في تسجيل الدخول التلقائي:", error);
-                // إذا فشل الرمز المخصص، حاول تسجيل الدخول بشكل مجهول
-                await signInAnonymously(auth);
-            }
-        };
-
-        window.addEventListener('load', initApp);
+        }
     </script>
 </body>
 </html>
