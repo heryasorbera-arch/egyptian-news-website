@@ -133,7 +133,7 @@
             transform: none;
             box-shadow: none;
         }
-        #mic-btn, #google-btn, #facebook-btn {
+        #mic-btn {
             background-color: #58a6ff;
         }
         #mic-btn.active {
@@ -435,8 +435,8 @@
 
                 <!-- إدخال الدردشة -->
                 <footer class="chat-input-container flex items-center">
-                    <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." class="text-right" disabled />
-                    <button id="mic-btn" title="تحدث" disabled>
+                    <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." class="text-right" />
+                    <button id="mic-btn" title="تحدث">
                         <!-- SVG for microphone icon -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 19c2.761 0 5-2.239 5-5V7c0-2.761-2.239-5-5-5S7 4.239 7 7v7c0 2.761 2.239 5 5 5z"></path>
@@ -444,7 +444,7 @@
                             <line x1="12" y1="22" x2="12" y2="19"></line>
                         </svg>
                     </button>
-                    <button id="sendChatBtn" title="إرسال" disabled>
+                    <button id="sendChatBtn" title="إرسال">
                         <!-- SVG for send icon -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -483,9 +483,7 @@
         const apiKey = "";
 
         // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        let app, auth, db;
         let userId = null;
         let isAuthReady = false;
 
@@ -578,6 +576,107 @@
                 chatInput.placeholder = "اكتب سؤالك هنا...";
             };
         }
+        
+        // This function will set up all event listeners and enable the UI.
+        const setupUIAndListeners = () => {
+            chatInput.disabled = false;
+            sendChatBtn.disabled = false;
+            if (isSpeechRecognitionSupported) {
+                micBtn.disabled = false;
+            }
+            chatInput.focus();
+            
+            // Event listener for send button
+            sendChatBtn.addEventListener('click', sendMessage);
+
+            // Event listener for enter key in input field
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Handle user logout
+            logoutBtn.addEventListener('click', handleLogout);
+
+            // Toggle sidebar
+            menuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            closeSidebarBtn.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+            });
+
+            // Start a new conversation
+            newChatBtn.addEventListener('click', () => {
+                startNewConversation();
+            });
+
+            // Clear the current chat history from the UI only
+            clearChatBtn.addEventListener('click', () => {
+                chatLog.innerHTML = '';
+                chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
+                appendMessage(`تم مسح المحادثة. كيف يمكنني مساعدتك الآن؟`, "onra");
+            });
+
+            // Event listeners for the custom modal
+            confirmDeleteBtn.addEventListener('click', async () => {
+                if (pendingDelete.convId) {
+                    await deleteConversation(pendingDelete.convId, pendingDelete.element);
+                }
+                confirmationModal.classList.add('hidden');
+            });
+
+            cancelDeleteBtn.addEventListener('click', () => {
+                confirmationModal.classList.add('hidden');
+                pendingDelete.convId = null;
+                pendingDelete.element = null;
+            });
+        };
+
+        // Initialize the app on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Immediately enable UI for responsiveness
+            setupUIAndListeners();
+            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
+
+            // Initialize Firebase and handle authentication in the background
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        loginButtons.classList.add('hidden');
+                        userInfo.classList.remove('hidden');
+                        userName = user.displayName || 'صديقي';
+                        userNameSpan.innerText = `مرحباً، ${userName}!`;
+                        loadConversations();
+                    } else {
+                        try {
+                            // If initial auth token is provided, sign in with it.
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                // Otherwise, sign in anonymously.
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("خطأ في تسجيل الدخول المجهول:", error);
+                            appendMessage("عذراً، لم نتمكن من تسجيل دخولك بشكل آمن. قد لا يتم حفظ محادثاتك.", "onra");
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("خطأ في تهيئة Firebase:", e);
+                appendMessage("عذراً، لم نتمكن من الاتصال بالخدمات. قد لا يتم حفظ محادثاتك.", "onra");
+            }
+        });
 
         // Handle user logout
         const handleLogout = async () => {
@@ -593,65 +692,6 @@
                 }
             }
         };
-        logoutBtn.addEventListener('click', handleLogout);
-
-        // Authentication state listener
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                isAuthReady = true;
-                loginButtons.classList.add('hidden');
-                userInfo.classList.remove('hidden');
-                // Use a default name if display name is not available
-                userName = user.displayName || 'صديقي';
-                userNameSpan.innerText = `مرحباً، ${userName}!`;
-                loadConversations();
-            } else {
-                try {
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("خطأ في تسجيل الدخول المجهول:", error);
-                    // Handle anonymous sign-in failure if needed
-                }
-            }
-        });
-
-        // Function to enable input fields and buttons
-        const enableChatInput = () => {
-            chatInput.disabled = false;
-            sendChatBtn.disabled = false;
-            if (isSpeechRecognitionSupported) {
-                micBtn.disabled = false;
-            }
-            chatInput.focus();
-        };
-
-        // Call enableChatInput immediately on page load to ensure the UI is interactive
-        document.addEventListener('DOMContentLoaded', () => {
-            enableChatInput();
-            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
-        });
-
-        // Toggle sidebar
-        menuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-        });
-
-        closeSidebarBtn.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-        });
-
-        // Start a new conversation
-        newChatBtn.addEventListener('click', () => {
-            startNewConversation();
-        });
-
-        // Clear the current chat history from the UI only
-        clearChatBtn.addEventListener('click', () => {
-            chatLog.innerHTML = '';
-            chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
-            appendMessage(`تم مسح المحادثة. كيف يمكنني مساعدتك الآن؟`, "onra");
-        });
 
         const startNewConversation = () => {
             activeConversationId = null;
@@ -710,20 +750,6 @@
             pendingDelete.element = elementToRemove;
             confirmationModal.classList.remove('hidden');
         };
-
-        // Event listeners for the custom modal
-        confirmDeleteBtn.addEventListener('click', async () => {
-            if (pendingDelete.convId) {
-                await deleteConversation(pendingDelete.convId, pendingDelete.element);
-            }
-            confirmationModal.classList.add('hidden');
-        });
-
-        cancelDeleteBtn.addEventListener('click', () => {
-            confirmationModal.classList.add('hidden');
-            pendingDelete.convId = null;
-            pendingDelete.element = null;
-        });
 
         // Function to delete a conversation
         const deleteConversation = async (convId, elementToRemove) => {
@@ -1080,17 +1106,6 @@
             }
         };
 
-        // Event listener for send button
-        sendChatBtn.addEventListener('click', sendMessage);
-
-        // Event listener for enter key in input field
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-        
         // Helper function for PCM to WAV conversion
         function pcmToWav(pcm, sampleRate) {
             const pcmLength = pcm.length;
