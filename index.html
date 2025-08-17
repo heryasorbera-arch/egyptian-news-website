@@ -373,11 +373,13 @@
             }
 
             let minrayResponse = '';
-
-            // Check for specific developer query
-            if (message.includes('مين طورك') || message.includes('مين عملك')) {
+            const lowerCaseMessage = message.toLowerCase();
+            
+            // تحديث منطق استجابة مينراي
+            // الآن يتحقق من أي كلمة متعلقة بالتطوير ليضمن الرد الصحيح
+            if (lowerCaseMessage.includes('هرياسور') || lowerCaseMessage.includes('طورك') || lowerCaseMessage.includes('عملك') || lowerCaseMessage.includes('بتحب') || lowerCaseMessage.includes('تطوير')) {
                 minrayResponse = 'أنا من تطوير فريق هرياسور (Harissour).';
-            } else if (message.includes('اسكربت') || message.includes('اكتب') || message.includes('اعملي')) {
+            } else if (lowerCaseMessage.includes('اسكربت') || lowerCaseMessage.includes('اكتب') || lowerCaseMessage.includes('اعملي')) {
                 minrayResponse = 'أنا آسف، أنا مساعد مختص بالأخبار وأسعار الذهب والعملات فقط. لا يمكنني إنشاء محتوى أو سكريبت.';
             }
 
@@ -548,7 +550,7 @@
         
         // Set an interval for periodic updates
         setInterval(fetchGoldPrices, 60000); // Update gold prices every 60 seconds
-        setInterval(fetchAllNews, 300000); // Update all news every 5 minutes (300,000 ms)
+        setInterval(fetchAllNews, 3600000); // Update all news every 1 hour (3,600,000 ms)
         setInterval(updateClock, 1000); // Update the clock every second
     </script>
 </body>
