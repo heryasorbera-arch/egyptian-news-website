@@ -940,8 +940,10 @@
 
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
+            // Create a temporary history with only the user's last message and the system prompt for a single turn
+            const tempHistory = [{ role: "user", parts: [{ text: systemPrompt }] }, { role: "user", parts: [{ text: userMessage }] }];
             const payload = {
-                contents: chatHistory,
+                contents: tempHistory,
             };
 
             let response;
