@@ -491,6 +491,7 @@
         let userId = null;
         let userName = 'صديقي';
         let isAuthReady = false;
+        let isFirebaseInitialized = false;
 
         // DOM Elements
         const chatLog = document.getElementById('chatLog');
@@ -527,7 +528,7 @@
             عندما يطلب منك إنشاء كود، قم بوضعه داخل علامات \`\`\`html أو \`\`\`javascript أو \`\`\`python.
             عندما يطلب منك رسم صورة، قم بتوليدها باستخدام نموذج الصور imagen-3.0-generate-002 وعرضها.
             عندما يطلب منك تحويل نص إلى صوت، قم بتوليد الصوت باستخدام نموذج gemini-2.5-flash-preview-tts وعرض مشغل صوت.
-            عندما يسألك شخص عن مشاعرك مثل "بتحبني"، أجب بشكل عاطفي وودود: "أنا بحب كل الأصدقاء اللي بيتكلموا معايا. انت شخص رائع! 🥰".
+            عندما يسألك شخص عن مشاعرك مثل "بتحبني"، أجب بشكل عاطفي وودود: "أنا بحب كل الأصدقاء اللي بيتكلموا معايا. انت شخص رائع! �".
             عندما يطلب منك اللعب، أجب: "تمام! أنا بحب اللعب. ابدأ أنت الأول وقول أي كلمة، ونكمل عليها.".
             حافظ على هذا الأسلوب الودود والعاطفي في كل محادثاتك.
         `;
@@ -643,53 +644,64 @@
 
         // Initialize Firebase and the app
         const initializeFirebaseAndApp = async () => {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
+            // Check if firebase config exists (i.e. if running in the Canvas environment)
+            if (Object.keys(firebaseConfig).length > 0) {
+                try {
+                    app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    isFirebaseInitialized = true;
 
-                // Set up auth state listener
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        userInfo.classList.remove('hidden');
-                        userName = user.displayName || 'صديقي';
-                        userNameSpan.innerText = `مرحباً، ${userName}!`;
-                        statusIndicator.innerText = "تم الاتصال بنجاح. يمكن حفظ محادثاتك.";
-                        statusIndicator.classList.remove('text-yellow-400');
-                        statusIndicator.classList.add('text-green-400');
-                        loadConversations();
-                    } else {
-                        isAuthReady = false;
-                        statusIndicator.innerText = "جاري الاتصال...";
-                        statusIndicator.classList.remove('text-green-400');
-                        statusIndicator.classList.add('text-yellow-400');
-                        try {
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                await signInAnonymously(auth);
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            isAuthReady = true;
+                            userInfo.classList.remove('hidden');
+                            userName = user.displayName || 'صديقي';
+                            userNameSpan.innerText = `مرحباً، ${userName}!`;
+                            statusIndicator.innerText = "تم الاتصال بنجاح. يمكن حفظ محادثاتك.";
+                            statusIndicator.classList.remove('text-yellow-400', 'text-red-400');
+                            statusIndicator.classList.add('text-green-400');
+                            loadConversations();
+                        } else {
+                            isAuthReady = false;
+                            statusIndicator.innerText = "جاري الاتصال...";
+                            statusIndicator.classList.remove('text-green-400', 'text-red-400');
+                            statusIndicator.classList.add('text-yellow-400');
+                            try {
+                                if (initialAuthToken) {
+                                    await signInWithCustomToken(auth, initialAuthToken);
+                                } else {
+                                    await signInAnonymously(auth);
+                                }
+                            } catch (e) {
+                                console.error("خطأ في تسجيل الدخول:", e);
+                                statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
+                                statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
+                                statusIndicator.classList.add('text-red-400');
                             }
-                        } catch (e) {
-                            console.error("خطأ في تسجيل الدخول:", e);
-                            statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
-                            statusIndicator.classList.remove('text-yellow-400');
-                            statusIndicator.classList.add('text-red-400');
                         }
-                    }
-                });
-                
-                // Now that auth is ready, set up the UI
-                setupUIAndListeners();
-                appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
-
-            } catch (e) {
-                console.error("خطأ في تهيئة Firebase:", e);
-                statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
-                statusIndicator.classList.remove('text-yellow-400');
+                    });
+                } catch (e) {
+                    console.error("خطأ في تهيئة Firebase:", e);
+                    isFirebaseInitialized = false;
+                    statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
+                    statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
+                    statusIndicator.classList.add('text-red-400');
+                }
+            } else {
+                // Handle local execution where Firebase config is not available
+                isFirebaseInitialized = false;
+                isAuthReady = false;
+                statusIndicator.innerText = "وضع عدم الاتصال: لن يتم حفظ المحادثات.";
+                statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
                 statusIndicator.classList.add('text-red-400');
+                conversationList.innerHTML = `<div class="p-4 text-center text-gray-400">لا يمكن حفظ المحادثات في هذا الوضع.</div>`;
             }
+            
+            // Now that auth is ready, set up the UI
+            setupUIAndListeners();
+            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
         };
 
         // Initialize the app on page load
@@ -697,6 +709,10 @@
 
         // Handle user logout
         const handleLogout = async () => {
+            if (!isFirebaseInitialized) {
+                console.log("وضع عدم الاتصال. لا يوجد تسجيل خروج.");
+                return;
+            }
             if (auth.currentUser && auth.currentUser.isAnonymous) {
                 window.location.reload();
             } else {
@@ -720,8 +736,8 @@
         };
 
         const saveMessageToFirestore = async (sender, text, isCode = false, isImage = false, isAudio = false) => {
-            if (!isAuthReady || !userId) {
-                console.log("المستخدم لم يسجل الدخول أو لم يتم تهيئة المصادقة بعد، لن يتم حفظ الرسالة.");
+            if (!isFirebaseInitialized || !isAuthReady || !userId) {
+                console.log("لم يتم تهيئة Firebase أو المستخدم لم يسجل الدخول، لن يتم حفظ الرسالة.");
                 return;
             }
             
@@ -770,7 +786,7 @@
 
         // Function to delete a conversation
         const deleteConversation = async (convId, elementToRemove) => {
-            if (!isAuthReady || !userId) {
+            if (!isFirebaseInitialized || !isAuthReady || !userId) {
                 console.error("المستخدم لم يسجل الدخول، لا يمكن حذف المحادثة.");
                 return;
             }
@@ -799,7 +815,7 @@
         };
 
         const loadConversations = () => {
-            if (!isAuthReady || !userId) {
+            if (!isFirebaseInitialized || !isAuthReady || !userId) {
                 conversationList.innerHTML = `<div class="p-4 text-center text-gray-400">سجل الدخول لحفظ وعرض محادثاتك.</div>`;
                 return;
             }
@@ -1175,7 +1191,4 @@
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
-        }
-    </script>
-</body>
-</html>
+      �
