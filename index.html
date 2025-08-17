@@ -431,6 +431,13 @@
                  <div id="statusIndicator" class="text-center py-2 text-sm text-yellow-400">
                     جاري الاتصال...
                 </div>
+                
+                <div id="loadingOverlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-20 hidden">
+                    <div class="flex flex-col items-center">
+                        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16 mb-4"></div>
+                        <p class="text-white text-lg font-bold">جاري تحميل التطبيق...</p>
+                    </div>
+                </div>
 
                 <!-- سجل الدردشة -->
                 <main id="chatLog" class="chat-log text-right">
@@ -439,8 +446,8 @@
 
                 <!-- إدخال الدردشة -->
                 <footer class="chat-input-container flex items-center">
-                    <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." class="text-right" />
-                    <button id="mic-btn" title="تحدث">
+                    <input type="text" id="chatInput" placeholder="اكتب سؤالك هنا..." class="text-right" disabled />
+                    <button id="mic-btn" title="تحدث" disabled>
                         <!-- SVG for microphone icon -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 19c2.761 0 5-2.239 5-5V7c0-2.761-2.239-5-5-5S7 4.239 7 7v7c0 2.761 2.239 5 5 5z"></path>
@@ -448,7 +455,7 @@
                             <line x1="12" y1="22" x2="12" y2="19"></line>
                         </svg>
                     </button>
-                    <button id="sendChatBtn" title="إرسال">
+                    <button id="sendChatBtn" title="إرسال" disabled>
                         <!-- SVG for send icon -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -512,6 +519,7 @@
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         const statusIndicator = document.getElementById('statusIndicator');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
         // State variables
         let chatHistory = [];
@@ -528,7 +536,7 @@
             عندما يطلب منك إنشاء كود، قم بوضعه داخل علامات \`\`\`html أو \`\`\`javascript أو \`\`\`python.
             عندما يطلب منك رسم صورة، قم بتوليدها باستخدام نموذج الصور imagen-3.0-generate-002 وعرضها.
             عندما يطلب منك تحويل نص إلى صوت، قم بتوليد الصوت باستخدام نموذج gemini-2.5-flash-preview-tts وعرض مشغل صوت.
-            عندما يسألك شخص عن مشاعرك مثل "بتحبني"، أجب بشكل عاطفي وودود: "أنا بحب كل الأصدقاء اللي بيتكلموا معايا. انت شخص رائع! �".
+            عندما يسألك شخص عن مشاعرك مثل "بتحبني"، أجب بشكل عاطفي وودود: "أنا بحب كل الأصدقاء اللي بيتكلموا معايا. انت شخص رائع! 🥰".
             عندما يطلب منك اللعب، أجب: "تمام! أنا بحب اللعب. ابدأ أنت الأول وقول أي كلمة، ونكمل عليها.".
             حافظ على هذا الأسلوب الودود والعاطفي في كل محادثاتك.
         `;
@@ -536,10 +544,7 @@
         // Check for Web Speech API support
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const isSpeechRecognitionSupported = !!SpeechRecognition;
-        if (!isSpeechRecognitionSupported) {
-            micBtn.style.display = 'none';
-        }
-
+        
         // Initialize speech recognition
         const recognition = isSpeechRecognitionSupported ? new SpeechRecognition() : null;
         if (recognition) {
@@ -589,6 +594,8 @@
             sendChatBtn.disabled = false;
             if (isSpeechRecognitionSupported) {
                 micBtn.disabled = false;
+            } else {
+                micBtn.style.display = 'none';
             }
             chatInput.focus();
             
@@ -644,15 +651,17 @@
 
         // Initialize Firebase and the app
         const initializeFirebaseAndApp = async () => {
-            // Check if firebase config exists (i.e. if running in the Canvas environment)
+            // Check if firebase config exists
             if (Object.keys(firebaseConfig).length > 0) {
                 try {
                     app = initializeApp(firebaseConfig);
                     auth = getAuth(app);
                     db = getFirestore(app);
                     isFirebaseInitialized = true;
+                    loadingOverlay.classList.remove('hidden');
 
                     onAuthStateChanged(auth, async (user) => {
+                        loadingOverlay.classList.add('hidden');
                         if (user) {
                             userId = user.uid;
                             isAuthReady = true;
@@ -663,6 +672,8 @@
                             statusIndicator.classList.remove('text-yellow-400', 'text-red-400');
                             statusIndicator.classList.add('text-green-400');
                             loadConversations();
+                            setupUIAndListeners();
+                            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
                         } else {
                             isAuthReady = false;
                             statusIndicator.innerText = "جاري الاتصال...";
@@ -679,15 +690,20 @@
                                 statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
                                 statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
                                 statusIndicator.classList.add('text-red-400');
+                                setupUIAndListeners();
+                                appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
                             }
                         }
                     });
                 } catch (e) {
                     console.error("خطأ في تهيئة Firebase:", e);
                     isFirebaseInitialized = false;
+                    loadingOverlay.classList.add('hidden');
                     statusIndicator.innerText = "فشل الاتصال. لن يتم حفظ محادثاتك.";
                     statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
                     statusIndicator.classList.add('text-red-400');
+                    setupUIAndListeners();
+                    appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
                 }
             } else {
                 // Handle local execution where Firebase config is not available
@@ -697,11 +713,9 @@
                 statusIndicator.classList.remove('text-yellow-400', 'text-green-400');
                 statusIndicator.classList.add('text-red-400');
                 conversationList.innerHTML = `<div class="p-4 text-center text-gray-400">لا يمكن حفظ المحادثات في هذا الوضع.</div>`;
+                setupUIAndListeners();
+                appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. للأسف، فشل الاتصال بالخدمة. يمكنك الدردشة معي، لكن لن يتم حفظ المحادثات.`, "onra");
             }
-            
-            // Now that auth is ready, set up the UI
-            setupUIAndListeners();
-            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
         };
 
         // Initialize the app on page load
@@ -1191,4 +1205,7 @@
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
-      �
+        }
+    </script>
+</body>
+</html>
