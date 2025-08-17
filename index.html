@@ -606,7 +606,6 @@
                 userName = user.displayName || 'صديقي';
                 userNameSpan.innerText = `مرحباً، ${userName}!`;
                 loadConversations();
-                enableChatInput();
             } else {
                 try {
                     await signInAnonymously(auth);
@@ -627,6 +626,12 @@
             chatInput.focus();
         };
 
+        // Call enableChatInput immediately on page load to ensure the UI is interactive
+        document.addEventListener('DOMContentLoaded', () => {
+            enableChatInput();
+            appendMessage(`أهلاً بك! أنا أونرا، مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟`, "onra");
+        });
+
         // Toggle sidebar
         menuBtn.addEventListener('click', () => {
             sidebar.classList.toggle('open');
@@ -645,7 +650,7 @@
         clearChatBtn.addEventListener('click', () => {
             chatLog.innerHTML = '';
             chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
-            appendMessage(`تم مسح المحادثة يا ${userName}. كيف يمكنني مساعدتك الآن؟`, "onra");
+            appendMessage(`تم مسح المحادثة. كيف يمكنني مساعدتك الآن؟`, "onra");
         });
 
         const startNewConversation = () => {
