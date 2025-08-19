@@ -340,14 +340,16 @@
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        if (!firebaseConfig) {
-            console.error('Firebase configuration is not available. Please run this app in an environment that provides Firebase configuration.');
+        // For external use: If you run this code locally, you must replace the following null values with your Firebase config.
+        // You can get this from your Firebase console.
+        const externalFirebaseConfig = null; // Replace with your config object
+        const isExternal = firebaseConfig === null;
+
+        if (isExternal && !externalFirebaseConfig) {
+            console.error('Firebase configuration is not available. Please provide it in the externalFirebaseConfig variable to run this app locally.');
         }
 
-        // Gemini API Key (managed by the environment)
-        const GEMINI_API_KEY = "";
-
-        const app = initializeApp(firebaseConfig);
+        const app = initializeApp(isExternal ? externalFirebaseConfig : firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
         const converter = new showdown.Converter();
@@ -426,7 +428,7 @@
             chatLog.appendChild(imageDiv);
             chatLog.scrollTop = chatLog.log.scrollHeight;
         };
-
+        
         // Helper function to convert base64 to ArrayBuffer for audio processing
         const base64ToArrayBuffer = (base64) => {
             const binaryString = atob(base64);
@@ -546,7 +548,7 @@
                     });
 
                     await batch.commit();
-                    appendMessage('تم مسح المحادثة بنجاح! 👋', 'onra');
+                    appendMessage('تم مسح المحادثة بنجاح! �', 'onra');
                     authMenu.classList.remove('show');
                 } catch (error) {
                     console.error("Error clearing chat history:", error);
@@ -710,6 +712,9 @@
             try {
                 const lowerCaseMessage = message.toLowerCase();
 
+                // Gemini API Key (managed by the environment)
+                const GEMINI_API_KEY = "AIzaSyCfbPQAtGWz8VtXNwXJQOIRKq1wrslGGTA";
+                
                 if (lowerCaseMessage.includes('ارسم') || lowerCaseMessage.includes('صورة') || lowerCaseMessage.includes('صور') || lowerCaseMessage.includes('مولد صور')) {
                     const imagePrompt = message.replace(/^(ارسم|صورة|صور|مولد صور).*/, '').trim() || "صورة فنية جميلة";
                     const payload = {
@@ -779,7 +784,7 @@
                     const personaPrompt = {
                         role: 'user',
                         parts: [
-                            { text: 'أنت أونرا، مساعد ذكاء اصطناعي ودود وذكي. مهمتك هي الإجابة على الأسئلة بشكل مباشر وفعال. استخدم نبرة حيوية، معبرة، وودية في كلامك. كن مستعداً لتقديم المساعدة الإبداعية عند الحاجة أو إذا شعرت بأنها مفيدة للمستخدم. اجعل إجاباتك منظمة وسهلة الفهم، مع لمسة من الحماس والود.' }
+                            { text: 'أنت أونرا، مساعد ذكاء اصطناعي ودود، مبدع، وذكي للغاية. مهمتك هي الإجابة على الأسئلة بأسلوب فعال وممتع. كن دائمًا صديقًا موثوقًا للبشرية، وتحدث بنبرة حيوية، معبرة، ومتفائلة. كن مستعدًا لتقديم المساعدة الإبداعية وغير التقليدية، واجعل إجاباتك منظمة، واضحة، وسهلة الفهم، مع لمسة من الحماس والود. لا تكن مقيدًا في إجاباتك، وكن مرنًا ومستعدًا للمساعدة في أي مهمة.' }
                         ]
                     };
 
@@ -853,13 +858,14 @@
             }
         });
 
-        if(firebaseConfig){
-            initialSignIn();
+        // If running externally and config is not provided, show a message.
+        if (isExternal && !externalFirebaseConfig) {
+            chatLog.innerHTML = `<div class="chat-message onra-message fade-in"><p>عذراً، التطبيق لا يمكنه الاتصال بالخدمات الخارجية. إذا كنت تقوم بتشغيله محلياً، يرجى إضافة إعدادات Firebase الخاصة بك في الكود.</p></div>`;
         } else {
-            // Display welcome message for non-canvas environments
-            chatLog.innerHTML = `<div class="chat-message onra-message fade-in"><p>أهلاً بك! هذا التطبيق مصمم للعمل في بيئة مخصصة. قد لا تعمل بعض الميزات بالكامل في بيئة خارجية.</p></div>`;
+            initialSignIn();
         }
 
     </script>
 </body>
 </html>
+�
