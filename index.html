@@ -301,7 +301,7 @@
         <!-- Chat Log -->
         <main id="chatLog" class="chat-log text-right">
             <div class="chat-message onra-message fade-in">
-                <p>أهلاً بك! أنا أونرا، مساعدك الذكي. يمكنك تسجيل الدخول لحفظ محادثاتك.</p>
+                <p>أهلاً بك! أنا أونرا، مساعدك الذكي. المحادثات محفوظة تلقائياً.</p>
             </div>
         </main>
 
@@ -341,7 +341,7 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         if (!firebaseConfig) {
-            alert('Firebase configuration is not available. Please run this app in an environment that provides Firebase configuration.');
+            console.error('Firebase configuration is not available. Please run this app in an environment that provides Firebase configuration.');
         }
 
         // Gemini API Key (managed by the environment)
@@ -528,38 +528,6 @@
                 chatLog.removeChild(typingIndicator);
             }
         };
-
-        // Function to save chat history to a text file
-        const saveChatHistory = async () => {
-            if (!isAuthReady || !userId) {
-                return;
-            }
-            try {
-                const snapshot = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/chatHistory`));
-                let chatText = "";
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const timestamp = new Date(data.timestamp).toLocaleString();
-                    const senderName = data.sender === 'user' ? 'أنت' : 'أونرا';
-                    chatText += `[${timestamp}] ${senderName}: ${data.message}\n\n`;
-                });
-
-                const blob = new Blob([chatText], { type: 'text/plain;charset=utf-8' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `onra-chat-history-${Date.now()}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                authMenu.classList.remove('show');
-                appendMessage('تم تجهيز المحادثة للتحميل! تفقد ملفاتك.', 'onra');
-
-            } catch (error) {
-                console.error("Error saving chat history:", error);
-                appendMessage("عذراً، حدث خطأ أثناء حفظ المحادثة.", 'onra');
-            }
-        };
         
         // Function to clear chat history from Firestore
         const clearChatHistory = async () => {
@@ -602,7 +570,8 @@
                 
                 // Subscribe to chat history only for authenticated users
                 const chatsCollection = collection(db, `artifacts/${appId}/users/${userId}/chatHistory`);
-                const q = query(chatsCollection, orderBy('timestamp'));
+                // Removed orderBy for simplicity and to avoid index issues
+                const q = query(chatsCollection);
                 
                 unsubscribeFromChat = onSnapshot(q, (snapshot) => {
                     const messages = [];
@@ -610,6 +579,9 @@
                         messages.push({ id: doc.id, ...doc.data() });
                     });
                     
+                    // Sort messages by timestamp in the client to avoid Firestore index issues
+                    messages.sort((a, b) => a.timestamp - b.timestamp);
+
                     chatLog.innerHTML = '';
                     
                     messages.forEach(msg => {
@@ -625,7 +597,7 @@
                     });
 
                     if (messages.length === 0) {
-                        appendMessage('أهلاً بك! أنا أونرا، مساعدك الذكي. يمكنك تسجيل الدخول لحفظ محادثاتك.', 'onra');
+                        appendMessage('أهلاً بك! أنا أونرا، مساعدك الذكي. المحادثات محفوظة تلقائياً.', 'onra');
                     }
                 }, (error) => {
                     console.error("Firestore snapshot listener error:", error);
@@ -640,7 +612,7 @@
                 isAuthReady = true;
                 setupAuthUI(user);
                 console.log("User is signed out or anonymous. Using temporary ID:", userId);
-                chatLog.innerHTML = `<div class="chat-message onra-message fade-in"><p>أهلاً بك! أنا أونرا، مساعدك الذكي. يمكنك تسجيل الدخول لحفظ محادثاتك.</p></div>`;
+                chatLog.innerHTML = `<div class="chat-message onra-message fade-in"><p>أهلاً بك! أنا أونرا، مساعدك الذكي. المحادثات محفوظة تلقائياً.</p></div>`;
             }
         });
 
@@ -672,12 +644,7 @@
                 userIdDisplay.textContent = `معرف المستخدم: ${user.uid}`;
                 authMenu.appendChild(userIdDisplay);
 
-                // Add the new "Save Chat" and "Clear Chat" buttons
-                const saveChatBtn = document.createElement('button');
-                saveChatBtn.textContent = 'عرض المحادثات المحفوظة';
-                saveChatBtn.onclick = saveChatHistory;
-                authMenu.appendChild(saveChatBtn);
-
+                // Add the "Clear Chat" button
                 const clearChatBtn = document.createElement('button');
                 clearChatBtn.textContent = 'مسح المحادثة';
                 clearChatBtn.onclick = clearChatHistory;
@@ -728,11 +695,13 @@
                 timestamp: Date.now()
             };
             
+            // Add user message to Firestore
             try {
                 await addDoc(collection(db, `artifacts/${appId}/users/${userId}/chatHistory`), userMessage);
             } catch (error) {
                 console.error("Error adding message to Firestore:", error);
-                appendMessage("عذراً، حدث خطأ في حفظ رسالتك. حاول مرة أخرى.", 'onra');
+                // On-screen message might be redundant due to onSnapshot, but good for debugging.
+                // appendMessage("عذراً، حدث خطأ في حفظ رسالتك. حاول مرة أخرى.", 'onra');
             }
 
             chatInput.value = '';
