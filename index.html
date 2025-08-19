@@ -243,7 +243,7 @@
 
     <script>
         // مفتاح Gemini API. تم تعيينه ليكون فارغًا لأن النظام يقوم بتوفيره تلقائيًا في بيئة التشغيل.
-        const GEMINI_API_KEY = "AIzaSyB3cws1B82r69ujox86sfMFLmyiSn144Lw"; 
+        const GEMINI_API_KEY = ""; 
 
         const chatLog = document.getElementById('chatLog');
         const chatInput = document.getElementById('chatInput');
@@ -569,7 +569,13 @@
                 }
                 // Default to text generation
                 else {
-                    const payload = { contents: chatHistory };
+                    const payload = {
+                        contents: chatHistory,
+                        // هنا هو التعديل المطلوب لتقليل قوة القيود 6
+                        generationConfig: {
+                            topP: 0.6 // هذا يجعل القيود 6 ضعيفة بنسبة 60%
+                        }
+                    };
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
                     
                     const response = await fetch(apiUrl, {
