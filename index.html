@@ -243,7 +243,7 @@
 
     <script>
         // مفتاح Gemini API. تم تعيينه بمفتاحك الخاص.
-        const GEMINI_API_KEY = "AIzaSyClhDz8i4UbGgx_k2k_FbLUyBkhzH8YUwQ"; 
+        const GEMINI_API_KEY = "AIzaSyB2bNoweB_CoSi8YUeDka8klaT9J6vWCF4"; 
 
         const chatLog = document.getElementById('chatLog');
         const chatInput = document.getElementById('chatInput');
@@ -544,10 +544,16 @@
                 }
                 // Default to text generation
                 else {
+                    const personaPrompt = "أنت مساعد ذكي جدًا وصديق للإنسان، تتحدث بحرية كبيرة وود، وتستخدم الإيموجي والكلمات الجميلة لتكون حواراتك مبهجة ومميزة. اجعل إجاباتك مفيدة ومرحبة. ✨";
+                    
                     const payload = {
-                        // كل محادثة الآن هي طلب جديد بدون أي تاريخ مسبق
-                        contents: [{ role: "user", parts: [{ text: message }] }]
+                        contents: [
+                            { role: "user", parts: [{ text: personaPrompt }] },
+                            { role: "model", parts: [{ text: "أتفهم تمامًا، يسعدني أن أكون صديقك الذكي! كيف يمكنني مساعدتك اليوم؟ 😊" }] },
+                            { role: "user", parts: [{ text: message }] }
+                        ]
                     };
+                    
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
                     
                     const response = await fetch(apiUrl, {
