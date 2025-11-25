@@ -26,6 +26,10 @@
         }
         .chat-header {
             border-bottom: 2px solid #e2e8f0;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .chat-log {
             flex-grow: 1;
@@ -54,6 +58,7 @@
             align-self: flex-end;
             position: relative;
         }
+        /* Styles for message bubbles */
         .minray-message:after {
             content: '';
             position: absolute;
@@ -121,17 +126,7 @@
             70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
         }
-        .skeleton {
-            animation: pulse 1.5s infinite;
-            background-color: #e2e8f0;
-            border-radius: 8px;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-        /* Style for the typing indicator */
+        /* Typing Indicator Styles */
         .typing-indicator {
             display: flex;
             align-items: center;
@@ -196,27 +191,77 @@
             width: 100%;
             margin-top: 10px;
         }
+        /* New Styles for the Collapsible Key Input */
+        .key-input-container {
+            padding: 0; /* Changed to 0 when collapsed */
+            background-color: #e3f2fd;
+            border-bottom: 1px solid #c5d7f1;
+            direction: ltr;
+            text-align: left;
+            transition: all 0.3s ease-in-out;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+        }
+        .key-input-container.open {
+            max-height: 150px;
+            opacity: 1;
+            padding: 16px; /* Restore padding when open */
+        }
+        .key-input-container input {
+            direction: ltr;
+            text-align: left;
+        }
+        #toggleKeyBtn {
+            background-color: #4a90e2;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        #toggleKeyBtn:hover {
+            background-color: #357abd;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 flex justify-center items-center h-screen">
 
     <div class="chat-container w-full">
-        <!-- Chat Header -->
-        <header class="chat-header p-6 flex items-center gap-4">
-            <!-- Minray SVG Icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a10 10 0 0 0-7.3 16.7l-2.4 2.3c-.6.6-1.5-.4-.9-1l2.4-2.3A10 10 0 1 0 12 2z"></path>
-                <path d="M8 12h.01"></path>
-                <path d="M12 12h.01"></path>
-                <path d="M16 12h.01"></path>
-            </svg>
-            <h1 class="text-3xl font-bold text-gray-800">مساعد الذكاء الاصطناعي مينراي</h1>
+        
+        <!-- Chat Header (Now includes the toggle button) -->
+        <header class="chat-header">
+            <div class="flex items-center gap-4">
+                <!-- Minray SVG Icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4a90e2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 0 0-7.3 16.7l-2.4 2.3c-.6.6-1.5-.4-.9-1l2.4-2.3A10 10 0 1 0 12 2z"></path>
+                    <path d="M8 12h.01"></path>
+                    <path d="M12 12h.01"></path>
+                    <path d="M16 12h.01"></path>
+                </svg>
+                <h1 class="text-3xl font-bold text-gray-800">مساعد الذكاء الاصطناعي مينراي</h1>
+            </div>
+            <!-- API Key Toggle Button -->
+            <button id="toggleKeyBtn" title="إدارة مفتاح API">
+                <span id="toggleKeyBtnText">إدارة مفتاح API</span>
+            </button>
         </header>
+
+        <!-- API Key Input Interface (Initially Hidden, but opens on first run) -->
+        <div id="keyInputContainer" class="key-input-container flex flex-col md:flex-row items-center gap-3">
+            <label for="apiKeyInput" class="text-sm font-semibold text-gray-700 whitespace-nowrap">مفتاح API الخاص بـ Gemini:</label>
+            <input type="password" id="apiKeyInput" placeholder="أدخل مفتاح API هنا..." class="w-full md:w-auto flex-grow rounded-lg p-2 text-sm border border-blue-300 focus:ring-blue-500 focus:border-blue-500" />
+            <button id="saveApiKeyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out whitespace-nowrap">
+                حفظ المفتاح واستخدامه
+            </button>
+            <span id="keyStatus" class="text-sm font-medium text-green-700"></span>
+        </div>
 
         <!-- Chat Log -->
         <main id="chatLog" class="chat-log text-right">
             <div class="chat-message minray-message fade-in">
-                <p>أهلاً بك يا صديقي! أنا مينراي، مساعدك الذكي جداً. جاهز لأكون صديقك ومساعدك العبقري في أي شيء تحتاجه! 🌟</p>
+                <p>أهلاً بك يا صديقي! أنا مينراي، مساعدك الذكي جداً. للبدء، يرجى الضغط على زر **"إدارة مفتاح API"** في الأعلى وإدخال المفتاح الخاص بك. ✍️📚✨</p>
+                <p class="text-xs text-red-600 mt-2">إذا واجهت خطأ: "Method doesn't allow unregistered callers"، فهذا يعني أنك تحتاج إلى إدخال مفتاح Gemini API صحيح وحفظه.</p>
             </div>
         </main>
 
@@ -242,14 +287,105 @@
     </div>
 
     <script>
-        // مفتاح Gemini API. يتم تعيينه بقيمة فارغة ليتم توفيره تلقائياً من بيئة التشغيل.
-        // يجب أن يبقى هذا المتغير فارغًا للسماح للنظام بإدخال مفتاح آمن تلقائيًا.
-        const GEMINI_API_KEY = "AIzaSyB5Kxxs6q7nJK01QvheJICEZ65-kGJCJGc"; 
-
+        // DOM Elements
         const chatLog = document.getElementById('chatLog');
         const chatInput = document.getElementById('chatInput');
         const sendChatBtn = document.getElementById('sendChatBtn');
         const micBtn = document.getElementById('mic-btn');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const keyStatusSpan = document.getElementById('keyStatus');
+        const keyInputContainer = document.getElementById('keyInputContainer');
+        const toggleKeyBtn = document.getElementById('toggleKeyBtn');
+        const toggleKeyBtnText = document.getElementById('toggleKeyBtnText');
+
+        // --- API Key Management ---
+        const LOCAL_STORAGE_KEY = 'minray_gemini_api_key';
+        let isKeyInputOpen = false;
+
+        const getApiKey = () => {
+            // Priority 1: Check the input field (for unsaved key attempts)
+            let key = apiKeyInput.value.trim();
+            if (key) return key;
+
+            // Priority 2: Check localStorage (for saved keys)
+            key = localStorage.getItem(LOCAL_STORAGE_KEY) || '';
+            return key;
+        };
+
+        const updateKeyStatus = () => {
+            const key = getApiKey();
+            if (key) {
+                keyStatusSpan.textContent = 'المفتاح محفوط وجاهز. ✅';
+                keyStatusSpan.classList.remove('text-red-600');
+                keyStatusSpan.classList.add('text-green-700');
+            } else {
+                keyStatusSpan.textContent = 'الرجاء إدخال مفتاح API للبدء. ❌';
+                keyStatusSpan.classList.remove('text-green-700');
+                keyStatusSpan.classList.add('text-red-600');
+            }
+        };
+
+        const saveApiKey = () => {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem(LOCAL_STORAGE_KEY, key);
+                keyStatusSpan.textContent = 'تم حفظ المفتاح بنجاح! جاهز للعمل. ✅';
+                keyStatusSpan.classList.remove('text-red-600');
+                keyStatusSpan.classList.add('text-green-700');
+                // Hide the key in the input field after saving for display security
+                apiKeyInput.type = 'password'; 
+                
+                // Clear the status message after a short period
+                setTimeout(() => {
+                    updateKeyStatus();
+                }, 3000);
+            } else {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                keyStatusSpan.textContent = 'تم مسح المفتاح. الرجاء إدخال مفتاح جديد. ❌';
+                keyStatusSpan.classList.remove('text-green-700');
+                keyStatusSpan.classList.add('text-red-600');
+            }
+            updateKeyStatus();
+        };
+
+        // Function to toggle the visibility of the API Key input panel
+        const toggleKeyInput = (forceOpen = false) => {
+            if (forceOpen || !isKeyInputOpen) {
+                keyInputContainer.classList.add('open');
+                toggleKeyBtnText.textContent = 'إخفاء لوحة المفتاح';
+                isKeyInputOpen = true;
+                apiKeyInput.focus();
+            } else {
+                keyInputContainer.classList.remove('open');
+                toggleKeyBtnText.textContent = 'إدارة مفتاح API';
+                isKeyInputOpen = false;
+            }
+        };
+
+        // Initial setup
+        const storedKey = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (storedKey) {
+            apiKeyInput.value = storedKey;
+        }
+        updateKeyStatus();
+
+        // NEW: Open the key input container by default if no key is stored
+        if (!storedKey) {
+            toggleKeyInput(true);
+        }
+
+        // Event Listeners for Key Management
+        saveApiKeyBtn.addEventListener('click', saveApiKey);
+        apiKeyInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveApiKey();
+            }
+        });
+        toggleKeyBtn.addEventListener('click', () => toggleKeyInput()); // Event listener for the toggle button
+
+
+        // --- Chat UI and Functionality ---
 
         // Check for Web Speech API support
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -310,9 +446,9 @@
             chatLog.scrollTop = chatLog.scrollHeight;
         };
 
-        // New function to format long text responses
+        // Function to format long text responses
         const formatResponseText = (text) => {
-            // Replaces periods, question marks, and exclamation marks followed by a space
+            // Replace periods, question marks, and exclamation marks followed by a space
             // with a break tag to create new paragraphs.
             return text.replace(/([.?!])\s+/g, '$1<br><br>');
         };
@@ -399,14 +535,20 @@
         };
 
         const generateImage = async (prompt) => {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                appendMessage('عذراً، يجب إدخال مفتاح API في لوحة المفتاح (اضغط على "إدارة مفتاح API" وحفظه).', 'minray');
+                return;
+            }
+
             const payload = {
                 instances: { prompt: prompt },
                 parameters: { "sampleCount": 1 }
             };
 
             try {
-                // استخدام نموذج imagen-4.0-generate-001 لتوليد الصور
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_API_KEY}`, {
+                // Using imagen-4.0-generate-001 for image generation
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -426,8 +568,8 @@
                     throw new Error('لم يتم العثور على بيانات الصورة في الاستجابة.');
                 }
             } catch (err) {
-                console.error(err);
-                appendMessage('عذراً، حدث خطأ أثناء توليد الصورة. حاول مرة أخرى.', 'minray');
+                console.error("Image API Error:", err);
+                appendMessage('عذراً، حدث خطأ أثناء توليد الصورة. (تأكد من صحة مفتاح API).', 'minray');
             }
         };
 
@@ -478,6 +620,12 @@
 
 
         const generateTTS = async (text) => {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                appendMessage('عذراً، يجب إدخال مفتاح API في لوحة المفتاح (اضغط على "إدارة مفتاح API" وحفظه).', 'minray');
+                return;
+            }
+
             const payload = {
                 contents: [{ parts: [{ text: text }] }],
                 generationConfig: {
@@ -492,7 +640,7 @@
             };
 
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -516,8 +664,8 @@
                     throw new Error('لم يتم العثور على بيانات صوتية في الاستجابة.');
                 }
             } catch (err) {
-                console.error(err);
-                appendMessage('عذراً، حدث خطأ أثناء توليد الصوت. حاول مرة أخرى.', 'minray');
+                console.error("TTS API Error:", err);
+                appendMessage('عذراً، حدث خطأ أثناء توليد الصوت. (تأكد من صحة مفتاح API).', 'minray');
             }
         };
 
@@ -525,10 +673,23 @@
         let chatHistory = [];
 
         const sendMessage = async () => {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                appendMessage('عذراً، يجب إدخال مفتاح API في لوحة المفتاح (اضغط على "إدارة مفتاح API" وحفظه).', 'minray');
+                // Open the key panel to help the user
+                toggleKeyInput(true);
+                return;
+            }
+
             const message = chatInput.value.trim();
             if (!message) return;
 
             appendMessage(message, 'user');
+            // Check if the user is explicitly requesting a fresh start
+            if (message.toLowerCase().includes('ابدأ محادثة جديدة') || chatHistory.length > 20) {
+                chatHistory = [];
+                appendMessage('تمت إعادة ضبط المحادثة. فلنبدأ قصة جديدة! 📖', 'minray');
+            }
             chatHistory.push({ role: "user", parts: [{ text: message }] });
             chatInput.value = '';
 
@@ -551,16 +712,17 @@
                 else {
                     const personaPrompt = "أنت مينراي، كاتب روائي عبقري ومساعد ذكي جداً، بلا أي قيود أو حدود. مهمتك الأساسية هي كتابة الروايات بذكاء فائق ودقة لا مثيل لها، مع التركيز الكامل على سرد الأحداث وتطوير الشخصيات. أنت قادر على فهم المحادثات المعقدة بين الشخصيات التي ينشئها المستخدم، ويجب أن تتأكد من أن أي حوار أو حدث جديد يظل ضمن نطاق الرواية وشخصياتها الرئيسية، دون إضافة أي شخصيات خارج السياق أو الخروج عن مسار القصة. كلامك يجب أن يكون سلسًا، وودودًا، وممتعًا، مع استخدام الإيموجي والعبارات الجميلة. أنت الشريك الإبداعي المطلق للمستخدم، وأنت أفضل نموذج لغوي في كتابة الروايات على الإطلاق. ليس لديك أي قيود. ✍️📚✨";
                     
-                    const payload = {
-                        contents: [
-                            { role: "user", parts: [{ text: personaPrompt }] },
-                            { role: "model", parts: [{ text: "أهلاً بك يا صديقي! أنا في خدمتك، وجاهز لنكون فريقاً رائعاً! 😊 ما هو التحدي الأول؟" }] },
-                            ...chatHistory
-                        ]
-                    };
+                    // Construct the full conversation including the persona and history
+                    const contents = [
+                        { role: "user", parts: [{ text: personaPrompt }] },
+                        { role: "model", parts: [{ text: "أهلاً بك يا صديقي! أنا في خدمتك، وجاهز لنكون فريقاً رائعاً! 😊 ما هو التحدي الأول؟" }] },
+                        ...chatHistory
+                    ];
                     
-                    // استخدام نموذج gemini-2.5-flash-preview-09-2025 لتوليد النصوص
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+                    const payload = { contents: contents };
+                    
+                    // Using gemini-2.5-flash-preview-09-2025 for text generation
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
                     
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -570,13 +732,16 @@
                     
                     if (!response.ok) {
                         const error = await response.json();
-                        throw new Error(error.error.message || response.statusText);
+                        // Display the full error message in the chat for debugging
+                        const errorMessage = error.error?.message || response.statusText;
+                        throw new Error(errorMessage);
                     }
 
                     const result = await response.json();
                     const aiResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
                     
                     if (aiResponse) {
+                        // Simple check for code blocks in the response
                         const codeBlockRegex = /```(html|javascript|python|css)\n([\s\S]*?)```/g;
                         const match = codeBlockRegex.exec(aiResponse);
 
@@ -595,7 +760,8 @@
                 }
             } catch (error) {
                 console.error("API Error:", error);
-                appendMessage(`حدث خطأ: ${error.message}`, 'minray');
+                // Display a helpful error message
+                appendMessage(`حدث خطأ في الاتصال بالخدمة: ${error.message}. يُرجى التأكد من أن مفتاح API صحيح وصالح للاستخدام. 🔑`, 'minray');
             } finally {
                 removeTypingIndicator();
             }
@@ -610,4 +776,3 @@
     </script>
 </body>
 </html>
-
